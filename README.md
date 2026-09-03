@@ -1,76 +1,39 @@
-# Snova.Std — Biblioteca Padrão e Gerenciador de Módulos Snovalang
+# Snova.Std — Snovalang Standard Library
 
-Repositório oficial da **Standard Library (`Snova.Std`)** e do **Gerenciador de Dependências (`snova-mod`)** para a linguagem Snovalang.
+The official **Standard Library (`Snova.Std`)** for the Snovalang programming language, written 100% in pure Snovalang.
 
----
+## Documentation Standard
 
-## 1. Estrutura de Módulos
-
-O pacote segue o namespace padronizado `Snova.Std.*`:
-
-| Módulo | Caminho do Pacote | Responsabilidade |
-|---|---|---|
-| **I/O** | `Snova.Std.IO` | Contratos `Reader`, `Writer`, `Closer`, `ByteBuffer`, cópia e streaming de dados. |
-| **Serialization** | `Snova.Std.Serialization` | Árvore universal `DataNode`, codificador/formatador JSON e binário. |
-| **HTTP** | `Snova.Std.Http` | `HttpRequest`, `HttpResponse`, `HeaderMap`, códigos de status e clientes HTTP. |
-| **LSP** | `Snova.Std.Lsp` | Protocolo JSON-RPC 2.0, frames `Content-Length`, `Diagnostic`, `Range`, `Position`. |
-| **Modules & Git** | `Snova.Std.Mod` | Parser de `snova.mod`, resolução SemVer (`v1.0.0`) e provedores Git (`github.com`, etc.). |
-
----
-
-## 2. Gestão de Dependências (Estilo Go Modules)
-
-O Snovalang adota o modelo de versionamento canônico baseado em URLs de provedores Git e versionamento semântico (SemVer), idêntico ao Go (`go.mod`).
-
-### Arquivo `snova.mod`
+Every function, method, struct, class, and property in `Snova.Std` is documented using the standard Snovalang Doc format:
 
 ```snova
-module github.com/aggitech/snova-std
-
-snova 1.0.0
-
-require (
-    github.com/supernova/snova-crypto v1.2.0
-    gitlab.com/org/snova-sql v0.4.1 // indirect
-)
+/* -- Doc:{funcName}
+ *
+ * -- Description: Explains what the declaration does and how it behaves.
+ *
+ * -- Param{paramName}: Description of the parameter.
+ * -- Returns: Description of the returned result.
+ */
 ```
 
-### Comandos do CLI `snova-mod`
+## Module Overview
 
+| Module | Package Path | Description |
+|---|---|---|
+| **IO** | `Snova.Std.IO` | `Reader`, `Writer`, `Closer` contracts, in-memory `ByteBuffer`, stream `copy`. |
+| **Serialization** | `Snova.Std.Serialization` | `DataNode` universal AST, RFC 8259 compliant `JsonSerializer` & `JsonParser`. |
+| **HTTP** | `Snova.Std.Http` | `HttpRequest`, `HttpResponse`, `HeaderMap`, HTTP methods and status helpers. |
+| **Collections** | `Snova.Std.Collections` | `List` (ArrayList), `Map` (hash table dictionary), `Set`, `Queue`. |
+| **Strings** | `Snova.Std.Strings` | `StringUtils` (`parseInt`, `intToString`, `split`, `join`), `StringBuilder`. |
+| **Async** | `Snova.Std.Async` | `TaskState`, concurrent `Channel` communication streams. |
+| **LSP** | `Snova.Std.Lsp` | Protocol models (`Position`, `Range`, `Diagnostic`, `RpcRequest`, `RpcResponse`), `LspTransport`. |
+| **Mod** | `Snova.Std.Mod` | `snova.mod` parser, SemVer 2.0.0 comparator (`Version`), Git provider resolver. |
+
+## Verification
+
+Verify syntax and structure using `snovac`:
 ```bash
-# Inicializar um novo módulo
-snova-mod init github.com/minha-empresa/meu-app
-
-# Baixar todas as dependências declaradas em snova.mod
-snova-mod download
-
-# Baixar um pacote específico com tag semver
-snova-mod download github.com/supernova/snova-crypto@v1.2.0
-
-# Copiar dependências locais para a pasta vendor (.snovalang/deps)
-snova-mod vendor
-
-# Limpar e sincronizar dependências
-snova-mod tidy
-```
-
-### Cache de Dependências
-
-Os pacotes baixados são mantidos de forma imutável e isolada no cache do usuário:
-`~/.snova/pkg/mod/<host>/<org>/<repo>@<version>`
-
----
-
-## 3. Como Construir
-
-```bash
-# Compilar o utilitário snova-mod
-make
-
-# Verificar sintaxe de todos os pacotes .snova
-../snovac/build/snovac --check-parse src/IO/IO.snova
-../snovac/build/snovac --check-parse src/Serialization/Serialization.snova
-../snovac/build/snovac --check-parse src/Http/Http.snova
-../snovac/build/snovac --check-parse src/Mod/Mod.snova
-../snovac/build/snovac --check-parse src/Lsp/Lsp.snova
+for f in src/*/*.snova; do
+    snovac --check-parse "$f"
+done
 ```

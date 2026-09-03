@@ -3,8 +3,10 @@ package Snova.Std.Http
 import Snova.Std.IO
 import Snova.Std.Strings
 
-// ── Métodos HTTP ────────────────────────────────────────────────────────────
-
+/* -- Doc:{HttpMethod}
+ *
+ * -- Description: Standard HTTP protocol request methods.
+ */
 enum HttpMethod {
     Get
     Post
@@ -15,9 +17,18 @@ enum HttpMethod {
     Options
 }
 
-// ── Códigos e Nomes de Status HTTP ──────────────────────────────────────────
-
+/* -- Doc:{HttpStatusHelper}
+ *
+ * -- Description: Helper providing HTTP status code descriptions and method serialization.
+ */
 public class HttpStatusHelper {
+    /* -- Doc:{reasonPhrase}
+     *
+     * -- Description: Returns canonical reason phrase string for a given numeric HTTP status code.
+     *
+     * -- Param{code}: Numeric HTTP status code (e.g. 200, 404).
+     * -- Returns: Human readable reason phrase string.
+     */
     public static method reasonPhrase(code: int): string {
         if code == 200 { return "OK" }
         if code == 201 { return "Created" }
@@ -35,6 +46,13 @@ public class HttpStatusHelper {
         return "Unknown Status"
     }
 
+    /* -- Doc:{methodToString}
+     *
+     * -- Description: Converts HttpMethod enum into uppercase HTTP method verb string.
+     *
+     * -- Param{method}: HttpMethod enum value.
+     * -- Returns: Uppercase string verb (GET, POST, etc.).
+     */
     public static method methodToString(method: HttpMethod): string {
         match method {
             HttpMethod.Get -> return "GET"
@@ -48,26 +66,54 @@ public class HttpStatusHelper {
     }
 }
 
-// ── Cabeçalhos HTTP ─────────────────────────────────────────────────────────
-
+/* -- Doc:{HttpHeader}
+ *
+ * -- Description: Key-value HTTP header representation.
+ */
 public struct HttpHeader {
     public let name: string
     public let value: string
 
+    /* -- Doc:{new}
+     *
+     * -- Description: Constructs an HTTP header pair.
+     *
+     * -- Param{name}: Header field name.
+     * -- Param{value}: Header field value.
+     * -- Returns: HttpHeader instance.
+     */
     public static method new(name: string, value: string): HttpHeader {
         return HttpHeader(name, value)
     }
 }
 
+/* -- Doc:{HeaderMap}
+ *
+ * -- Description: Collection of HTTP headers with case-preserving lookup and replacement.
+ */
 public class HeaderMap {
     private var entries: Array<HttpHeader>
 
+    /* -- Doc:{new}
+     *
+     * -- Description: Creates an empty HeaderMap.
+     *
+     * -- Returns: New HeaderMap instance.
+     */
     public static method new(): HeaderMap {
         let hm = HeaderMap()
         hm.entries = []
         return hm
     }
 
+    /* -- Doc:{set}
+     *
+     * -- Description: Sets or updates a header key-value pair.
+     *
+     * -- Param{name}: Header name.
+     * -- Param{value}: Header value.
+     * -- Returns: 0.
+     */
     public method set(name: string, value: string): int {
         var i = 0
         while i < this.entries.len() {
@@ -81,6 +127,13 @@ public class HeaderMap {
         return 0
     }
 
+    /* -- Doc:{get}
+     *
+     * -- Description: Retrieves the header value matching name if present.
+     *
+     * -- Param{name}: Header name to look up.
+     * -- Returns: Option with value string or None.
+     */
     public method get(name: string): Option<string> {
         var i = 0
         while i < this.entries.len() {
@@ -92,19 +145,37 @@ public class HeaderMap {
         return None
     }
 
+    /* -- Doc:{all}
+     *
+     * -- Description: Returns array of all stored header pairs.
+     *
+     * -- Returns: Array of HttpHeader structs.
+     */
     public method all(): Array<HttpHeader> {
         return this.entries
     }
 }
 
-// ── Requisição e Resposta HTTP em Snovalang Puro ────────────────────────────
-
+/* -- Doc:{HttpRequest}
+ *
+ * -- Description: Client or server HTTP request representation.
+ */
 public class HttpRequest {
     public var method: HttpMethod
     public var path: string
     public var headers: HeaderMap
     public var body: string
 
+    /* -- Doc:{new}
+     *
+     * -- Description: Creates a new HttpRequest object.
+     *
+     * -- Param{method}: HTTP method.
+     * -- Param{path}: Request URI path.
+     * -- Param{headers}: Header collection.
+     * -- Param{body}: Request body content.
+     * -- Returns: HttpRequest instance.
+     */
     public static method new(method: HttpMethod, path: string, headers: HeaderMap, body: string): HttpRequest {
         let req = HttpRequest()
         req.method = method
@@ -114,7 +185,12 @@ public class HttpRequest {
         return req
     }
 
-    // Serializa a requisição completa em formato wire HTTP/1.1
+    /* -- Doc:{format}
+     *
+     * -- Description: Serializes the complete HTTP request into wire format text.
+     *
+     * -- Returns: Wire format string.
+     */
     public method format(): string {
         let methodStr = HttpStatusHelper.methodToString(this.method)
         var out = methodStr + " " + this.path + " HTTP/1.1\r\n"
@@ -129,11 +205,24 @@ public class HttpRequest {
     }
 }
 
+/* -- Doc:{HttpResponse}
+ *
+ * -- Description: HTTP response packet model with status code, headers and body.
+ */
 public class HttpResponse {
     public var statusCode: int
     public var headers: HeaderMap
     public var body: string
 
+    /* -- Doc:{new}
+     *
+     * -- Description: Creates an HttpResponse instance.
+     *
+     * -- Param{statusCode}: Integer HTTP response code.
+     * -- Param{headers}: Response header map.
+     * -- Param{body}: Response payload string.
+     * -- Returns: Initialized HttpResponse.
+     */
     public static method new(statusCode: int, headers: HeaderMap, body: string): HttpResponse {
         let res = HttpResponse()
         res.statusCode = statusCode
@@ -142,6 +231,14 @@ public class HttpResponse {
         return res
     }
 
+    /* -- Doc:{json}
+     *
+     * -- Description: Convenience helper constructing an application/json response.
+     *
+     * -- Param{jsonText}: JSON formatted string body.
+     * -- Param{statusCode}: HTTP status code (defaults to 200).
+     * -- Returns: Configured HttpResponse.
+     */
     public static method json(jsonText: string, statusCode: int = 200): HttpResponse {
         let hm = HeaderMap.new()
         hm.set("Content-Type", "application/json; charset=utf-8")
@@ -149,7 +246,12 @@ public class HttpResponse {
         return HttpResponse.new(statusCode, hm, jsonText)
     }
 
-    // Serializa a resposta completa em formato wire HTTP/1.1
+    /* -- Doc:{format}
+     *
+     * -- Description: Serializes response into RFC 7230 HTTP/1.1 wire string.
+     *
+     * -- Returns: Raw HTTP response string.
+     */
     public method format(): string {
         let reason = HttpStatusHelper.reasonPhrase(this.statusCode)
         let statusStr = StringUtils.intToString(this.statusCode)

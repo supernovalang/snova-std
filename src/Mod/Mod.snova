@@ -2,8 +2,10 @@ package Snova.Std.Mod
 
 import Snova.Std.Strings
 
-// ── Versionamento Semântico (SemVer) em Snovalang Puro ───────────────────────
-
+/* -- Doc:{Version}
+ *
+ * -- Description: Semantic versioning structure adhering to SemVer 2.0.0 specifications.
+ */
 public struct Version {
     public let major: int
     public let minor: int
@@ -11,10 +13,28 @@ public struct Version {
     public let prerelease: string
     public let raw: string
 
+    /* -- Doc:{new}
+     *
+     * -- Description: Creates a semantic Version struct.
+     *
+     * -- Param{major}: Major version number.
+     * -- Param{minor}: Minor version number.
+     * -- Param{patch}: Patch version number.
+     * -- Param{prerelease}: Prerelease tag string.
+     * -- Param{raw}: Original raw version text.
+     * -- Returns: Initialized Version.
+     */
     public static method new(major: int, minor: int, patch: int, prerelease: string = "", raw: string = ""): Version {
         return Version(major, minor, patch, prerelease, raw)
     }
 
+    /* -- Doc:{parse}
+     *
+     * -- Description: Parses semantic version string (e.g. "v1.2.3").
+     *
+     * -- Param{vStr}: Version string representation.
+     * -- Returns: Option with Version or None on syntax error.
+     */
     public static method parse(vStr: string): Option<Version> {
         var s = vStr.trim()
         if s.startsWith("v") {
@@ -40,6 +60,13 @@ public struct Version {
         }
     }
 
+    /* -- Doc:{isGreaterThan}
+     *
+     * -- Description: Compares two SemVer versions.
+     *
+     * -- Param{other}: Version to compare against.
+     * -- Returns: True if this version is strictly greater.
+     */
     public method isGreaterThan(other: Version): bool {
         if this.major > other.major { return true }
         if this.major < other.major { return false }
@@ -48,6 +75,12 @@ public struct Version {
         return this.patch > other.patch
     }
 
+    /* -- Doc:{toString}
+     *
+     * -- Description: Formats Version into canonical "vX.Y.Z" string.
+     *
+     * -- Returns: String representation.
+     */
     public method toString(): string {
         if this.raw.len() > 0 {
             return this.raw
@@ -59,23 +92,46 @@ public struct Version {
     }
 }
 
-// ── Declaração de Dependência de Módulo (snova.mod) ─────────────────────────
-
+/* -- Doc:{ModuleRequire}
+ *
+ * -- Description: Represents a required module dependency declaration inside snova.mod.
+ */
 public struct ModuleRequire {
-    public let path: string       // ex: "github.com/aggitech/snova-json"
-    public let version: Version   // ex: v1.0.0
+    public let path: string
+    public let version: Version
     public let isIndirect: bool
 
+    /* -- Doc:{new}
+     *
+     * -- Description: Constructs a ModuleRequire declaration.
+     *
+     * -- Param{path}: Canonical module URL.
+     * -- Param{version}: Required SemVer version.
+     * -- Param{isIndirect}: True if dependency is transitive.
+     * -- Returns: ModuleRequire struct.
+     */
     public static method new(path: string, version: Version, isIndirect: bool = false): ModuleRequire {
         return ModuleRequire(path, version, isIndirect)
     }
 }
 
+/* -- Doc:{ModFile}
+ *
+ * -- Description: Parser and generator for snova.mod module configuration files.
+ */
 public class ModFile {
     public var modulePath: string
     public var snovaVersion: string
     public var requires: Array<ModuleRequire>
 
+    /* -- Doc:{new}
+     *
+     * -- Description: Creates a new ModFile descriptor.
+     *
+     * -- Param{modulePath}: Canonical module path identifier.
+     * -- Param{snovaVersion}: Minimum compatible Snovalang version.
+     * -- Returns: ModFile instance.
+     */
     public static method new(modulePath: string, snovaVersion: string = "1.0.0"): ModFile {
         let mf = ModFile()
         mf.modulePath = modulePath
@@ -84,11 +140,26 @@ public class ModFile {
         return mf
     }
 
+    /* -- Doc:{addRequire}
+     *
+     * -- Description: Registers a dependency requirement.
+     *
+     * -- Param{path}: Dependency module path.
+     * -- Param{version}: Semantic version.
+     * -- Param{isIndirect}: Indirect flag.
+     * -- Returns: 0.
+     */
     public method addRequire(path: string, version: Version, isIndirect: bool = false): int {
         this.requires.push(ModuleRequire.new(path, version, isIndirect))
         return 0
     }
 
+    /* -- Doc:{format}
+     *
+     * -- Description: Formats ModFile into standard snova.mod file syntax text.
+     *
+     * -- Returns: Formatted snova.mod file contents.
+     */
     public method format(): string {
         var out = "module " + this.modulePath + "\n\n"
         out = out + "snova " + this.snovaVersion + "\n\n"
@@ -105,8 +176,10 @@ public class ModFile {
     }
 }
 
-// ── Resolução de Provedores Git ─────────────────────────────────────────────
-
+/* -- Doc:{GitProviderKind}
+ *
+ * -- Description: Git provider host categories.
+ */
 enum GitProviderKind {
     GitHub
     GitLab
@@ -114,7 +187,18 @@ enum GitProviderKind {
     CustomGit
 }
 
+/* -- Doc:{GitProviderResolver}
+ *
+ * -- Description: Resolves Git provider URLs and computes local cache directory paths.
+ */
 public class GitProviderResolver {
+    /* -- Doc:{detectProvider}
+     *
+     * -- Description: Identifies Git provider from URL prefix.
+     *
+     * -- Param{url}: Module path or URL.
+     * -- Returns: GitProviderKind enum.
+     */
     public static method detectProvider(url: string): GitProviderKind {
         if url.startsWith("github.com/") {
             return GitProviderKind.GitHub
@@ -126,6 +210,13 @@ public class GitProviderResolver {
         return GitProviderKind.CustomGit
     }
 
+    /* -- Doc:{getCloneUrl}
+     *
+     * -- Description: Generates cloneable HTTPS/SSH git URL from module path.
+     *
+     * -- Param{modulePath}: Canonical module path.
+     * -- Returns: Full git clone URL.
+     */
     public static method getCloneUrl(modulePath: string): string {
         if modulePath.startsWith("http://") || modulePath.startsWith("https://") || modulePath.startsWith("git@") {
             return modulePath
@@ -133,6 +224,15 @@ public class GitProviderResolver {
         return "https://" + modulePath + ".git"
     }
 
+    /* -- Doc:{getCacheDirectory}
+     *
+     * -- Description: Computes local cache path for a specific module version.
+     *
+     * -- Param{cacheRoot}: Root cache directory (~/.snova).
+     * -- Param{modulePath}: Canonical path.
+     * -- Param{version}: Version struct.
+     * -- Returns: Filesystem path string.
+     */
     public static method getCacheDirectory(cacheRoot: string, modulePath: string, version: Version): string {
         return cacheRoot + "/pkg/mod/" + modulePath + "@" + version.toString()
     }

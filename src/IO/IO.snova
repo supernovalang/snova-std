@@ -1,7 +1,9 @@
 package Snova.Std.IO
 
-// ── Erros de Entrada e Saída ──────────────────────────────────────────────────
-
+/* -- Doc:{IOError}
+ *
+ * -- Description: Enumeration of all input/output error variants that can occur during stream operations.
+ */
 enum IOError {
     UnexpectedEOF
     ClosedStream
@@ -14,27 +16,71 @@ enum IOError {
     Custom(message: string)
 }
 
-// ── Contratos de Streams (Interfaces) ─────────────────────────────────────────
-
-// Reader representa um fluxo sequencial de leitura de bytes.
+/* -- Doc:{Reader}
+ *
+ * -- Description: Interface representing a sequential readable byte stream.
+ */
 interface Reader {
+    /* -- Doc:{read}
+     *
+     * -- Description: Reads up to count bytes into the specified buffer starting at offset.
+     *
+     * -- Param{buffer}: Target array to store the read bytes into.
+     * -- Param{offset}: Starting index inside the buffer array.
+     * -- Param{count}: Maximum number of bytes to read.
+     * -- Returns: Result with the number of bytes read or an IOError.
+     */
     method read(buffer: Array<int>, offset: int, count: int): Result<int, IOError>
 }
 
-// Writer representa um fluxo sequencial de escrita de bytes.
+/* -- Doc:{Writer}
+ *
+ * -- Description: Interface representing a sequential writable byte stream.
+ */
 interface Writer {
+    /* -- Doc:{write}
+     *
+     * -- Description: Writes count bytes from the buffer starting at offset into the stream.
+     *
+     * -- Param{buffer}: Source array of bytes to write.
+     * -- Param{offset}: Starting index in the source buffer.
+     * -- Param{count}: Number of bytes to write.
+     * -- Returns: Result with the number of bytes written or an IOError.
+     */
     method write(buffer: Array<int>, offset: int, count: int): Result<int, IOError>
+
+    /* -- Doc:{flush}
+     *
+     * -- Description: Flushes any buffered bytes to the underlying destination.
+     *
+     * -- Returns: Result indicating success or an IOError.
+     */
     method flush(): Result<int, IOError>
 }
 
-// Closer define recursos que necessitam de fechamento determinístico.
+/* -- Doc:{Closer}
+ *
+ * -- Description: Interface for resources requiring deterministic cleanup.
+ */
 interface Closer {
+    /* -- Doc:{close}
+     *
+     * -- Description: Releases all resources associated with this instance.
+     *
+     * -- Returns: Result indicating clean shutdown or an IOError.
+     */
     method close(): Result<int, IOError>
 }
 
-// ── Funções Utilitárias de I/O ───────────────────────────────────────────────
-
-// Copia todos os dados de `src` para `dst` até o final do fluxo (EOF).
+/* -- Doc:{copy}
+ *
+ * -- Description: Copies all data from a Reader into a Writer until EOF is reached.
+ *
+ * -- Param{src}: Source readable stream.
+ * -- Param{dst}: Destination writable stream.
+ * -- Param{bufferSize}: Size of the temporary chunk buffer allocated for transferring data.
+ * -- Returns: Total number of bytes copied.
+ */
 func copy(src: Reader, dst: Writer, bufferSize: int): Result<int, IOError> {
     var totalBytes = 0
     let tempBuf: Array<int> = []
@@ -74,13 +120,21 @@ func copy(src: Reader, dst: Writer, bufferSize: int): Result<int, IOError> {
     }
 }
 
-// ── Stream de Buffer em Memória ─────────────────────────────────────────────
-
+/* -- Doc:{ByteBuffer}
+ *
+ * -- Description: In-memory dynamic byte array buffer supporting read, write, and seek operations.
+ */
 public class ByteBuffer {
     private var data: Array<int>
     private var readPos: int
     private var isClosed: bool
 
+    /* -- Doc:{new}
+     *
+     * -- Description: Constructs an empty in-memory byte buffer.
+     *
+     * -- Returns: A new ByteBuffer instance.
+     */
     public static method new(): ByteBuffer {
         let b = ByteBuffer()
         b.data = []
@@ -89,6 +143,15 @@ public class ByteBuffer {
         return b
     }
 
+    /* -- Doc:{write}
+     *
+     * -- Description: Writes an array slice of bytes into the memory buffer.
+     *
+     * -- Param{buffer}: Input byte array.
+     * -- Param{offset}: Offset inside the input array.
+     * -- Param{count}: Total bytes to append.
+     * -- Returns: Number of bytes appended.
+     */
     public method write(buffer: Array<int>, offset: int, count: int): Result<int, IOError> {
         if this.isClosed {
             return Err(IOError.ClosedStream)
@@ -102,6 +165,13 @@ public class ByteBuffer {
         return Ok(count)
     }
 
+    /* -- Doc:{writeByte}
+     *
+     * -- Description: Appends a single byte (0-255) to the buffer.
+     *
+     * -- Param{byte}: Integer value representing the byte.
+     * -- Returns: Success indicator.
+     */
     public method writeByte(byte: int): Result<int, IOError> {
         if this.isClosed {
             return Err(IOError.ClosedStream)
@@ -110,6 +180,13 @@ public class ByteBuffer {
         return Ok(1)
     }
 
+    /* -- Doc:{writeString}
+     *
+     * -- Description: Writes a UTF-8 string into the buffer.
+     *
+     * -- Param{text}: String text to append.
+     * -- Returns: Number of characters written.
+     */
     public method writeString(text: string): Result<int, IOError> {
         if this.isClosed {
             return Err(IOError.ClosedStream)
@@ -129,6 +206,15 @@ public class ByteBuffer {
         return Ok(textLen)
     }
 
+    /* -- Doc:{read}
+     *
+     * -- Description: Reads bytes from current read position into buffer.
+     *
+     * -- Param{buffer}: Destination buffer.
+     * -- Param{offset}: Destination start offset.
+     * -- Param{count}: Max bytes to read.
+     * -- Returns: Number of bytes transferred.
+     */
     public method read(buffer: Array<int>, offset: int, count: int): Result<int, IOError> {
         if this.isClosed {
             return Err(IOError.ClosedStream)
@@ -150,23 +236,53 @@ public class ByteBuffer {
         return Ok(toRead)
     }
 
+    /* -- Doc:{flush}
+     *
+     * -- Description: No-op for in-memory buffer.
+     *
+     * -- Returns: Success indicator.
+     */
     public method flush(): Result<int, IOError> {
         return Ok(0)
     }
 
+    /* -- Doc:{close}
+     *
+     * -- Description: Closes the byte buffer and rejects future read/write operations.
+     *
+     * -- Returns: Success indicator.
+     */
     public method close(): Result<int, IOError> {
         this.isClosed = true
         return Ok(0)
     }
 
+    /* -- Doc:{len}
+     *
+     * -- Description: Returns unread byte count in the buffer.
+     *
+     * -- Returns: Integer length.
+     */
     public method len(): int {
         return this.data.len() - this.readPos
     }
 
+    /* -- Doc:{isEOF}
+     *
+     * -- Description: Checks if read cursor reached the end of buffer.
+     *
+     * -- Returns: True if cursor is at or beyond end.
+     */
     public method isEOF(): bool {
         return this.readPos >= this.data.len()
     }
 
+    /* -- Doc:{reset}
+     *
+     * -- Description: Clears all buffer data and resets read cursor to 0.
+     *
+     * -- Returns: 0.
+     */
     public method reset(): int {
         this.data = []
         this.readPos = 0

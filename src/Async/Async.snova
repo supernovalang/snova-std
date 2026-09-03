@@ -1,7 +1,9 @@
 package Snova.Std.Async
 
-// ── Estado de Execução Assíncrona ───────────────────────────────────────────
-
+/* -- Doc:{TaskState}
+ *
+ * -- Description: Lifecycle states of asynchronous tasks and promises.
+ */
 enum TaskState {
     Pending
     Running
@@ -10,12 +12,20 @@ enum TaskState {
     Cancelled
 }
 
-// ── Canal de Comunicação Concorrente (Channel / Pulsar) ──────────────────────
-
+/* -- Doc:{Channel}
+ *
+ * -- Description: Multi-producer lightweight concurrent communication channel.
+ */
 public class Channel {
     private var buffer: Array<string>
     private var isClosed: bool
 
+    /* -- Doc:{new}
+     *
+     * -- Description: Creates a new open concurrent Channel.
+     *
+     * -- Returns: Channel instance.
+     */
     public static method new(): Channel {
         let ch = Channel()
         ch.buffer = []
@@ -23,6 +33,13 @@ public class Channel {
         return ch
     }
 
+    /* -- Doc:{send}
+     *
+     * -- Description: Sends a message string into the channel.
+     *
+     * -- Param{message}: Content to send.
+     * -- Returns: True if sent successfully, false if closed.
+     */
     public method send(message: string): bool {
         if this.isClosed {
             return false
@@ -31,6 +48,12 @@ public class Channel {
         return true
     }
 
+    /* -- Doc:{receive}
+     *
+     * -- Description: Receives next available message from the channel.
+     *
+     * -- Returns: Option with message or None if channel buffer is empty.
+     */
     public method receive(): Option<string> {
         if this.buffer.len() == 0 {
             return None
@@ -46,11 +69,23 @@ public class Channel {
         return Some(msg)
     }
 
+    /* -- Doc:{close}
+     *
+     * -- Description: Closes the channel and disallows further send operations.
+     *
+     * -- Returns: True.
+     */
     public method close(): bool {
         this.isClosed = true
         return true
     }
 
+    /* -- Doc:{len}
+     *
+     * -- Description: Returns number of pending messages in channel.
+     *
+     * -- Returns: Count.
+     */
     public method len(): int {
         return this.buffer.len()
     }

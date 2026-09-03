@@ -1,9 +1,17 @@
 package Snova.Std.Strings
 
-// ── Funções Puras de Parsing e Conversão em Snovalang ───────────────────────
-
+/* -- Doc:{StringUtils}
+ *
+ * -- Description: Comprehensive string manipulation, parsing, formatting and transformation utilities.
+ */
 public class StringUtils {
-    // Converte um caractere numérico em seu valor inteiro ('0' -> 0, etc.)
+    /* -- Doc:{digitValue}
+     *
+     * -- Description: Converts single digit character into numeric integer value (0-9).
+     *
+     * -- Param{c}: Input single character string.
+     * -- Returns: Option with integer digit value or None if not a digit.
+     */
     public static method digitValue(c: string): Option<int> {
         if c == "0" { return Some(0) }
         if c == "1" { return Some(1) }
@@ -18,7 +26,13 @@ public class StringUtils {
         return None
     }
 
-    // Parser puro de string para inteiro em Snovalang
+    /* -- Doc:{parseInt}
+     *
+     * -- Description: Pure Snovalang string-to-integer parser with sign support.
+     *
+     * -- Param{s}: Decimal string representation.
+     * -- Returns: Option with parsed integer or None on parse failure.
+     */
     public static method parseInt(s: string): Option<int> {
         let trimmed = s.trim()
         if trimmed.len() == 0 {
@@ -64,7 +78,13 @@ public class StringUtils {
         return Some(result)
     }
 
-    // Converte inteiro para string em Snovalang puro
+    /* -- Doc:{intToString}
+     *
+     * -- Description: Formats an integer value into its decimal string representation.
+     *
+     * -- Param{n}: Integer value to format.
+     * -- Returns: Formatted string representation.
+     */
     public static method intToString(n: int): string {
         if n == 0 {
             return "0"
@@ -100,7 +120,14 @@ public class StringUtils {
         return digits
     }
 
-    // Divide string por um delimitador em Snovalang puro
+    /* -- Doc:{split}
+     *
+     * -- Description: Splits text on each occurrence of delimiter substring.
+     *
+     * -- Param{text}: Source string to split.
+     * -- Param{delimiter}: Delimiter string separator.
+     * -- Returns: Array of separated string chunks.
+     */
     public static method split(text: string, delimiter: string): Array<string> {
         let result: Array<string> = []
         if text.len() == 0 {
@@ -140,7 +167,14 @@ public class StringUtils {
         return result
     }
 
-    // Junta elementos de um array com delimitador
+    /* -- Doc:{join}
+     *
+     * -- Description: Joins an array of strings with a specified delimiter separator.
+     *
+     * -- Param{items}: Array of strings to join.
+     * -- Param{delimiter}: Separator placed between items.
+     * -- Returns: Joined single string.
+     */
     public static method join(items: Array<string>, delimiter: string): string {
         var out = ""
         var i = 0
@@ -155,12 +189,20 @@ public class StringUtils {
     }
 }
 
-// ── Construtor de Strings (StringBuilder) em Snovalang Puro ─────────────────
-
+/* -- Doc:{StringBuilder}
+ *
+ * -- Description: Growable string buffer for high performance concatenation.
+ */
 public class StringBuilder {
     private var buffer: Array<string>
     private var size: int
 
+    /* -- Doc:{new}
+     *
+     * -- Description: Creates a new empty StringBuilder.
+     *
+     * -- Returns: New instance of StringBuilder.
+     */
     public static method new(): StringBuilder {
         let sb = StringBuilder()
         sb.buffer = []
@@ -168,28 +210,60 @@ public class StringBuilder {
         return sb
     }
 
+    /* -- Doc:{append}
+     *
+     * -- Description: Appends text string into the internal buffer.
+     *
+     * -- Param{text}: Text to append.
+     * -- Returns: Current total length of builder.
+     */
     public method append(text: string): int {
         this.buffer.push(text)
         this.size = this.size + text.len()
         return this.size
     }
 
+    /* -- Doc:{appendLine}
+     *
+     * -- Description: Appends text followed by a newline character.
+     *
+     * -- Param{text}: Text line to append.
+     * -- Returns: Current total length.
+     */
     public method appendLine(text: string): int {
         this.append(text)
         this.append("\n")
         return this.size
     }
 
+    /* -- Doc:{len}
+     *
+     * -- Description: Returns total character length of accumulated content.
+     *
+     * -- Returns: Integer length.
+     */
     public method len(): int {
         return this.size
     }
 
+    /* -- Doc:{clear}
+     *
+     * -- Description: Clears buffer contents and resets length.
+     *
+     * -- Returns: 0.
+     */
     public method clear(): int {
         this.buffer = []
         this.size = 0
         return 0
     }
 
+    /* -- Doc:{toString}
+     *
+     * -- Description: Converts accumulated buffer chunks into final string.
+     *
+     * -- Returns: Complete string.
+     */
     public method toString(): string {
         return StringUtils.join(this.buffer, "")
     }

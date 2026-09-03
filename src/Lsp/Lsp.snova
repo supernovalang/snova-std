@@ -3,37 +3,73 @@ package Snova.Std.Lsp
 import Snova.Std.IO
 import Snova.Std.Strings
 
-// ── Posição e Range (0-based conforme especificação Microsoft LSP) ───────────
-
+/* -- Doc:{Position}
+ *
+ * -- Description: Zero-based line and character position within a text document.
+ */
 public struct Position {
     public let line: int
     public let character: int
 
+    /* -- Doc:{new}
+     *
+     * -- Description: Constructs a document Position.
+     *
+     * -- Param{line}: Zero-based line number.
+     * -- Param{character}: Zero-based character offset.
+     * -- Returns: Position struct.
+     */
     public static method new(line: int, character: int): Position {
         return Position(line, character)
     }
 }
 
+/* -- Doc:{Range}
+ *
+ * -- Description: Range inside a text document delimited by start and end positions.
+ */
 public struct Range {
     public let start: Position
     public let end: Position
 
+    /* -- Doc:{new}
+     *
+     * -- Description: Constructs a Range between start and end.
+     *
+     * -- Param{start}: Beginning position.
+     * -- Param{end}: Ending position.
+     * -- Returns: Range struct.
+     */
     public static method new(start: Position, end: Position): Range {
         return Range(start, end)
     }
 }
 
+/* -- Doc:{Location}
+ *
+ * -- Description: Represents a file location specified by document URI and Range.
+ */
 public struct Location {
     public let uri: string
     public let range: Range
 
+    /* -- Doc:{new}
+     *
+     * -- Description: Creates a Location struct.
+     *
+     * -- Param{uri}: Target document URI (e.g. file:///path).
+     * -- Param{range}: Text range.
+     * -- Returns: Location struct.
+     */
     public static method new(uri: string, range: Range): Location {
         return Location(uri, range)
     }
 }
 
-// ── Diagnósticos do Compilador no LSP ───────────────────────────────────────
-
+/* -- Doc:{DiagnosticSeverity}
+ *
+ * -- Description: LSP diagnostic severity levels.
+ */
 enum DiagnosticSeverity {
     Error        // 1
     Warning      // 2
@@ -41,6 +77,10 @@ enum DiagnosticSeverity {
     Hint         // 4
 }
 
+/* -- Doc:{Diagnostic}
+ *
+ * -- Description: Language server diagnostic item representing compile errors, warnings and hints.
+ */
 public struct Diagnostic {
     public let range: Range
     public let severity: DiagnosticSeverity
@@ -48,23 +88,49 @@ public struct Diagnostic {
     public let source: string
     public let message: string
 
+    /* -- Doc:{new}
+     *
+     * -- Description: Constructs an LSP Diagnostic object.
+     *
+     * -- Param{range}: Span range in document.
+     * -- Param{severity}: Severity level (Error, Warning, Info, Hint).
+     * -- Param{code}: Diagnostic error code (e.g. SNOVA0023).
+     * -- Param{message}: Diagnostic error message.
+     * -- Param{source}: Diagnostic source name.
+     * -- Returns: Diagnostic struct.
+     */
     public static method new(range: Range, severity: DiagnosticSeverity, code: string, message: string, source: string = "snovac"): Diagnostic {
         return Diagnostic(range, severity, code, source, message)
     }
 }
 
-// ── Mensagens JSON-RPC ──────────────────────────────────────────────────────
-
+/* -- Doc:{RpcRequest}
+ *
+ * -- Description: JSON-RPC 2.0 incoming request payload.
+ */
 public struct RpcRequest {
     public let id: int
     public let method: string
     public let paramsJson: string
 
+    /* -- Doc:{new}
+     *
+     * -- Description: Constructs an RpcRequest.
+     *
+     * -- Param{id}: Request numeric ID.
+     * -- Param{method}: RPC method name.
+     * -- Param{paramsJson}: Parameters serialized as JSON.
+     * -- Returns: RpcRequest struct.
+     */
     public static method new(id: int, method: string, paramsJson: string = "{}"): RpcRequest {
         return RpcRequest(id, method, paramsJson)
     }
 }
 
+/* -- Doc:{RpcResponse}
+ *
+ * -- Description: JSON-RPC 2.0 response packet.
+ */
 public struct RpcResponse {
     public let id: int
     public let resultJson: string
@@ -72,25 +138,56 @@ public struct RpcResponse {
     public let errorCode: int
     public let errorMessage: string
 
+    /* -- Doc:{ok}
+     *
+     * -- Description: Constructs a successful RPC response.
+     *
+     * -- Param{id}: Corresponding request ID.
+     * -- Param{resultJson}: Serialized result JSON.
+     * -- Returns: RpcResponse struct.
+     */
     public static method ok(id: int, resultJson: string): RpcResponse {
         return RpcResponse(id, resultJson, false, 0, "")
     }
 
+    /* -- Doc:{error}
+     *
+     * -- Description: Constructs an RPC error response.
+     *
+     * -- Param{id}: Request ID.
+     * -- Param{code}: JSON-RPC error code.
+     * -- Param{message}: Error description.
+     * -- Returns: RpcResponse struct.
+     */
     public static method error(id: int, code: int, message: string): RpcResponse {
         return RpcResponse(id, "null", true, code, message)
     }
 }
 
-// ── Transportador JSON-RPC com Framing Content-Length em Snovalang ──────────
-
+/* -- Doc:{LspTransport}
+ *
+ * -- Description: Framing and Content-Length encoding/decoding utilities for LSP transport.
+ */
 public class LspTransport {
-    // Formata o pacote JSON-RPC com o cabeçalho Content-Length
+    /* -- Doc:{formatMessage}
+     *
+     * -- Description: Wraps JSON payload with Content-Length header.
+     *
+     * -- Param{jsonPayload}: Serialized JSON payload string.
+     * -- Returns: Framed message string.
+     */
     public static method formatMessage(jsonPayload: string): string {
         let lengthStr = StringUtils.intToString(jsonPayload.len())
         return "Content-Length: " + lengthStr + "\r\n\r\n" + jsonPayload
     }
 
-    // Extrai o Content-Length de um cabeçalho HTTP/JSON-RPC
+    /* -- Doc:{parseContentLength}
+     *
+     * -- Description: Parses Content-Length header from incoming stream buffer.
+     *
+     * -- Param{headerText}: Raw headers text.
+     * -- Returns: Option with integer byte length or None.
+     */
     public static method parseContentLength(headerText: string): Option<int> {
         let lines = StringUtils.split(headerText, "\n")
         var i = 0

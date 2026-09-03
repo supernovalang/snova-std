@@ -3,8 +3,10 @@ package Snova.Std.Serialization
 import Snova.Std.IO
 import Snova.Std.Strings
 
-// ── Erros de Serialização ───────────────────────────────────────────────────
-
+/* -- Doc:{SerializationError}
+ *
+ * -- Description: Error categories arising during serialization or deserialization processes.
+ */
 enum SerializationError {
     SyntaxError(message: string, position: int)
     TypeMismatch(expected: string, got: string)
@@ -14,8 +16,10 @@ enum SerializationError {
     Custom(message: string)
 }
 
-// ── Árvore de Dados Universal (JSON DOM Puro) ────────────────────────────────
-
+/* -- Doc:{DataNode}
+ *
+ * -- Description: Universal dynamically-typed data tree representing JSON-like structured data.
+ */
 enum DataNode {
     Null
     Bool(val: bool)
@@ -26,18 +30,39 @@ enum DataNode {
     Dict(entries: Array<DataEntry>)
 }
 
+/* -- Doc:{DataEntry}
+ *
+ * -- Description: Key-value pair entry inside a dictionary data node.
+ */
 public struct DataEntry {
     public let key: string
     public let value: DataNode
 
+    /* -- Doc:{new}
+     *
+     * -- Description: Creates a key-value data entry.
+     *
+     * -- Param{key}: Field key name.
+     * -- Param{value}: DataNode value.
+     * -- Returns: Initialized DataEntry.
+     */
     public static method new(key: string, value: DataNode): DataEntry {
         return DataEntry(key, value)
     }
 }
 
-// ── Serializador JSON em Snovalang Puro ─────────────────────────────────────
-
+/* -- Doc:{JsonSerializer}
+ *
+ * -- Description: Serializer producing formatted JSON strings from DataNode trees.
+ */
 public class JsonSerializer {
+    /* -- Doc:{stringify}
+     *
+     * -- Description: Converts a DataNode AST into a valid compact JSON string.
+     *
+     * -- Param{node}: Root data node to serialize.
+     * -- Returns: Compact JSON string.
+     */
     public static method stringify(node: DataNode): string {
         match node {
             DataNode.Null -> return "null"
@@ -73,6 +98,13 @@ public class JsonSerializer {
         }
     }
 
+    /* -- Doc:{escapeString}
+     *
+     * -- Description: Escapes special characters inside string according to RFC 8259 JSON spec.
+     *
+     * -- Param{text}: Raw input text.
+     * -- Returns: Quoted and escaped JSON string literal.
+     */
     public static method escapeString(text: string): string {
         var out = "\""
         var i = 0
@@ -95,9 +127,18 @@ public class JsonSerializer {
     }
 }
 
-// ── Parser JSON em Snovalang Puro ───────────────────────────────────────────
-
+/* -- Doc:{JsonParser}
+ *
+ * -- Description: Parser converting JSON formatted text into DataNode tree.
+ */
 public class JsonParser {
+    /* -- Doc:{parse}
+     *
+     * -- Description: Parses JSON text input into a DataNode hierarchy.
+     *
+     * -- Param{jsonText}: Input JSON string.
+     * -- Returns: Result with parsed DataNode or SerializationError.
+     */
     public static method parse(jsonText: string): Result<DataNode, SerializationError> {
         let trimmed = jsonText.trim()
         if trimmed == "null" { return Ok(DataNode.Null) }
