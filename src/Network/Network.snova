@@ -1,0 +1,167 @@
+package Snova.Std.Network
+
+import Snova.Std.Strings
+import Snova.Std.Collections
+import Snova.Std.IO
+
+/* -- Doc:{NetworkProtocol}
+ *
+ * -- Description: Standard network communication protocols supported by the Snova network stack.
+ */
+public enum NetworkProtocol {
+    Tcp
+    Udp
+    Http
+    Https
+    Websocket
+}
+
+/* -- Doc:{NetworkError}
+ *
+ * -- Description: Enumeration of network-level errors used across all network packages.
+ */
+public enum NetworkError {
+    ConnectionRefused(host: string, port: int)
+    ConnectionClosed
+    BindFailed(host: string, port: int)
+    Timeout(ms: int)
+    InvalidAddress(addr: string)
+    Custom(message: string)
+}
+
+/* -- Doc:{ICloseable}
+ *
+ * -- Description: LSP-compliant interface for resources that can be released.
+ *   Any network resource (connection, listener, worker) that holds OS-level
+ *   resources must implement this interface, enabling polymorphic teardown
+ *   through a single uniform contract (Liskov Substitution Principle).
+ */
+public interface ICloseable {
+    /* -- Doc:{close}
+     *
+     * -- Description: Releases all underlying resources held by this object.
+     * -- Returns: 0 on success, non-zero on error.
+     */
+    method close(): int
+}
+
+/* -- Doc:{IAddressable}
+ *
+ * -- Description: Interface for any network entity that can report its bound or remote address.
+ *   Enables generic address-aware operations without coupling to concrete types.
+ */
+public interface IAddressable {
+    /* -- Doc:{address}
+     *
+     * -- Description: Returns the SocketAddress this entity is bound to or connected from.
+     */
+    method getAddress(): SocketAddress
+}
+
+/* -- Doc:{IConnectable}
+ *
+ * -- Description: Interface for bidirectional network stream communication.
+ *   Implemented by all concrete connection types (TCP, HTTP, WebSocket).
+ *   Following Liskov Substitution Principle, any consumer accepting an IConnectable
+ *   can work with any concrete connection without knowing the transport protocol.
+ */
+public interface IConnectable : ICloseable, IAddressable {
+    /* -- Doc:{send}
+     *
+     * -- Description: Sends a string payload through the connection.
+     * -- Param{data}: Raw string payload to transmit.
+     * -- Returns: Number of bytes sent, or -1 on error.
+     */
+    method send(data: string): int
+
+    /* -- Doc:{receive}
+     *
+     * -- Description: Reads available data from the connection buffer.
+     * -- Returns: Buffered string data, or empty string if none available.
+     */
+    method receive(): string
+
+    /* -- Doc:{isOpen}
+     *
+     * -- Description: Returns true if the connection is open and usable.
+     */
+    method isOpen(): bool
+}
+
+/* -- Doc:{IWorker}
+ *
+ * -- Description: Interface for all background pulsar worker types.
+ *   Enables worker pools to operate over heterogeneous worker implementations
+ *   (e.g. TcpWorker and HttpWorker) through a single polymorphic contract.
+ *   Adheres to the Interface Segregation Principle — only the minimal contract
+ *   needed for pool management is captured here.
+ */
+public interface IWorker : ICloseable {
+    /* -- Doc:{workerId}
+     *
+     * -- Description: Returns the numeric ID assigned to this worker at spawn time.
+     */
+    method getWorkerId(): int
+
+    /* -- Doc:{isActive}
+     *
+     * -- Description: Returns true if this worker is alive and processing tasks.
+     */
+    method isActive(): bool
+}
+
+/* -- Doc:{SocketAddress}
+ *
+ * -- Description: Represents a network socket host and port endpoint.
+ */
+public struct SocketAddress {
+    public var host: string
+    public var port: int
+
+    public static method new(host: string, port: int): SocketAddress {
+        return SocketAddress(host, port)
+    }
+
+    public static method parse(addr: string): SocketAddress {
+        let parts = StringUtils.split(addr, ":")
+        if parts.len() >= 2 {
+            let pOpt = StringUtils.parseInt(parts[1])
+            match pOpt {
+                Some(p) -> {
+                    return SocketAddress(parts[0], p)
+                }
+                None -> {
+                    return SocketAddress(parts[0], 80)
+                }
+            }
+        }
+        return SocketAddress("127.0.0.1", 80)
+    }
+
+    public method toString(): string {
+        return this.host + ":" + StringUtils.intToString(this.port)
+    }
+}
+
+/* -- Doc:{NetworkConfig}
+ *
+ * -- Description: Shared base configuration reused by all network server types (DRY principle).
+ *   Both TcpListener and HttpServer extend the same config concept rather than duplicating fields.
+ */
+public struct NetworkConfig {
+    public var host: string
+    public var port: int
+    public var backlog: int
+    public var maxConnections: int
+    public var readTimeoutMs: int
+    public var writeTimeoutMs: int
+
+    public static method default(): NetworkConfig {
+        return NetworkConfig("0.0.0.0", 8080, 128, 1000, 5000, 5000)
+    }
+
+    public static method create(host: string, port: int): NetworkConfig {
+        return NetworkConfig(host, port, 128, 1000, 5000, 5000)
+    }
+}
+

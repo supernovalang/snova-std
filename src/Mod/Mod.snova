@@ -37,8 +37,8 @@ public struct Version {
      */
     public static method parse(vStr: string): Option<Version> {
         var s = vStr.trim()
-        if s.startsWith("v") {
-            s = s.replaceFirst("v", "")
+        if StringUtils.startsWith(s, "v") {
+            s = s.substring(1, s.len())
         }
         let parts = StringUtils.split(s, ".")
         if parts.len() < 3 {
@@ -58,6 +58,7 @@ public struct Version {
             }
             None -> return None
         }
+        return None
     }
 
     /* -- Doc:{isGreaterThan}
@@ -133,11 +134,8 @@ public class ModFile {
      * -- Returns: ModFile instance.
      */
     public static method new(modulePath: string, snovaVersion: string = "1.0.0"): ModFile {
-        let mf = ModFile()
-        mf.modulePath = modulePath
-        mf.snovaVersion = snovaVersion
-        mf.requires = []
-        return mf
+        let empty: Array<ModuleRequire> = []
+        return ModFile(modulePath, snovaVersion, empty)
     }
 
     /* -- Doc:{addRequire}

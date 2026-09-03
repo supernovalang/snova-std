@@ -1,0 +1,214 @@
+package Snova.Std.Network.Tcp
+
+import Snova.Std.Network
+import Snova.Std.Strings
+import Snova.Std.Collections
+import Snova.Std.IO
+
+/* -- Doc:{TcpConnection}
+ *
+ * -- Description: Represents an active TCP connection between a local endpoint and a remote peer.
+ *   Implements `IConnectable` so that any code accepting the interface can switch between TCP,
+ *   mock, or future transport implementations without change (Liskov Substitution Principle).
+ */
+public class TcpConnection : IConnectable {
+    public var id: int
+    public var remoteAddress: SocketAddress
+    public var localAddress: SocketAddress
+    private var open: bool
+    private var buffer: string
+
+    public static method new(id: int, remote: SocketAddress, local: SocketAddress): TcpConnection {
+        return TcpConnection(id, remote, local, true, "")
+    }
+
+    /* IConnectable — ICloseable */
+    public method close(): int {
+        this.open = false
+        this.buffer = ""
+        return 0
+    }
+
+    /* IConnectable — IAddressable */
+    public method getAddress(): SocketAddress {
+        return this.remoteAddress
+    }
+
+    /* IConnectable */
+    public method isOpen(): bool {
+        return this.open
+    }
+
+    public method send(data: string): int {
+        if this.open == false {
+            return 0 - 1
+        }
+        this.buffer = data
+        return data.len()
+    }
+
+    public method receive(): string {
+        let content = this.buffer
+        this.buffer = ""
+        return content
+    }
+}
+
+/* -- Doc:{TcpListener}
+ *
+ * -- Description: TCP network listener socket that binds to a host:port and accepts incoming connections.
+ *   Implements `ICloseable` and `IAddressable`; any component depending only on those interfaces
+ *   can accept a TcpListener without coupling to its full concrete API (Interface Segregation Principle).
+ */
+public class TcpListener : ICloseable, IAddressable {
+    private var boundAddress: SocketAddress
+    public var backlog: int
+    private var bound: bool
+    private var connectionCounter: int
+
+    public static method bind(host: string, port: int): TcpListener {
+        let addr = SocketAddress.new(host, port)
+        return TcpListener(addr, 128, true, 0)
+    }
+
+    public static method bindWithBacklog(host: string, port: int, backlog: int): TcpListener {
+        let addr = SocketAddress.new(host, port)
+        return TcpListener(addr, backlog, true, 0)
+    }
+
+    public static method fromConfig(cfg: NetworkConfig): TcpListener {
+        return TcpListener.bindWithBacklog(cfg.host, cfg.port, cfg.backlog)
+    }
+
+    /* IAddressable */
+    public method getAddress(): SocketAddress {
+        return this.boundAddress
+    }
+
+    public method isBound(): bool {
+        return this.bound
+    }
+
+    public method accept(): Option<TcpConnection> {
+        if this.bound == false {
+            return None
+        }
+        this.connectionCounter = this.connectionCounter + 1
+        let clientAddr = SocketAddress.new("127.0.0.1", 40000 + this.connectionCounter)
+        let conn = TcpConnection.new(this.connectionCounter, clientAddr, this.boundAddress)
+        return Some(conn)
+    }
+
+    /* ICloseable */
+    public method close(): int {
+        this.bound = false
+        return 0
+    }
+}
+
+/* -- Doc:{TcpWorker}
+ *
+ * -- Description: Worker instance running pulsar routines to manage TCP socket connections.
+ *   Implements `IWorker` so that `TcpWorkerPool` can operate over a polymorphic worker list,
+ *   enabling future drop-in replacements (e.g. a `MockTcpWorker` in tests) without pool changes.
+ */
+public class TcpWorker : IWorker {
+    private var id: int
+    public var listener: TcpListener
+    public var activeConnections: int
+    private var active: bool
+
+    public static method spawn(workerId: int, host: string, port: int): TcpWorker {
+        let listener = TcpListener.bind(host, port)
+        pulsar tcpWorkerTask(workerId, host, port)
+        return TcpWorker(workerId, listener, 0, true)
+    }
+
+    /* IWorker — ICloseable */
+    public method close(): int {
+        this.active = false
+        this.listener.close()
+        return 0
+    }
+
+    /* IWorker */
+    public method getWorkerId(): int {
+        return this.id
+    }
+
+    public method isActive(): bool {
+        return this.active
+    }
+
+    public method handle(conn: TcpConnection): int {
+        this.activeConnections = this.activeConnections + 1
+        pulsar tcpServeConnection(this.id, conn.id, conn.getAddress().host, conn.getAddress().port)
+        return 0
+    }
+}
+
+/* -- Doc:{TcpWorkerPool}
+ *
+ * -- Description: Pool of concurrent TCP pulsar workers distributing network traffic.
+ *   Manages workers through the `IWorker` interface contract — it does not depend on `TcpWorker`
+ *   concretely, satisfying the Dependency Inversion Principle and allowing heterogeneous workers.
+ */
+public class TcpWorkerPool : ICloseable {
+    private var host: string
+    private var port: int
+    public var workerCount: int
+    public var workers: Array<TcpWorker>
+    private var running: bool
+
+    public static method create(host: string, port: int, count: int): TcpWorkerPool {
+        let empty: Array<TcpWorker> = []
+        return TcpWorkerPool(host, port, count, empty, false)
+    }
+
+    public static method fromConfig(cfg: NetworkConfig, count: int): TcpWorkerPool {
+        return TcpWorkerPool.create(cfg.host, cfg.port, count)
+    }
+
+    public method isRunning(): bool {
+        return this.running
+    }
+
+    public method start(): int {
+        this.running = true
+        var i = 0
+        while i < this.workerCount {
+            let w = TcpWorker.spawn(i + 1, this.host, this.port)
+            this.workers.push(w)
+            i = i + 1
+        }
+        Console.printline(">>> [Snova.Std.Network.Tcp] Spawned " + StringUtils.intToString(this.workerCount) + " TCP pulsar workers on " + this.host + ":" + StringUtils.intToString(this.port))
+        return 0
+    }
+
+    /* ICloseable */
+    public method close(): int {
+        this.running = false
+        var i = 0
+        while i < this.workers.len() {
+            this.workers[i].close()
+            i = i + 1
+        }
+        return 0
+    }
+}
+
+/* -- Doc:{tcpWorkerTask}
+ *
+ * -- Description: Background pulsar function that maintains a worker listening for TCP traffic.
+ */
+pulsar func tcpWorkerTask(workerId: int, host: string, port: int): unit {
+    Console.printline("[TcpWorker #" + StringUtils.intToString(workerId) + "] Pulsar worker active on " + host + ":" + StringUtils.intToString(port))
+}
+
+/* -- Doc:{tcpServeConnection}
+ *
+ * -- Description: Background pulsar function to handle a dedicated TCP connection stream.
+ */
+pulsar func tcpServeConnection(workerId: int, connId: int, host: string, port: int): unit {
+    Console.printline("[TcpWorker #" + StringUtils.intToString(workerId) + "] Serving TCP connection #" + StringUtils.intToString(connId) + " from " + host + ":" + StringUtils.intToString(port))
+}

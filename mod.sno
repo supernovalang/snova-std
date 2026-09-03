@@ -1,0 +1,21 @@
+module github.com/supernovalang/snova-std https://github.com/supernovalang/snova-std
+
+snova "1.0.0"
+
+dependencies(
+    direct = [
+        "github.com/supernovalang/snova-async@1.0.0",
+        "github.com/supernovalang/snova-collections@1.0.0",
+        "github.com/supernovalang/snova-http@1.0.0",
+        "github.com/supernovalang/snova-io@1.0.0",
+        "github.com/supernovalang/snova-serialization@1.0.0",
+        "github.com/supernovalang/snova-strings@1.0.0"
+    ],
+    indirect = [
+        "github.com/supernovalang/snova-http -> github.com/supernovalang/snova-collections",
+        "github.com/supernovalang/snova-http -> github.com/supernovalang/snova-io",
+        "github.com/supernovalang/snova-http -> github.com/supernovalang/snova-strings",
+        "github.com/supernovalang/snova-serialization -> github.com/supernovalang/snova-io",
+        "github.com/supernovalang/snova-serialization -> github.com/supernovalang/snova-strings"
+    ]
+)

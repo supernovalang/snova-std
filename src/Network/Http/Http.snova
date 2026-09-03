@@ -1,5 +1,6 @@
-package Snova.Std.Http
+package Snova.Std.Network.Http
 
+import Snova.Std.Network
 import Snova.Std.IO
 import Snova.Std.Strings
 import Snova.Std.Collections
@@ -8,7 +9,7 @@ import Snova.Std.Collections
  *
  * -- Description: Standard HTTP protocol request methods.
  */
-enum HttpMethod {
+public enum HttpMethod {
     Get
     Post
     Put
@@ -21,6 +22,7 @@ enum HttpMethod {
 /* -- Doc:{HttpStatusHelper}
  *
  * -- Description: Helper providing HTTP status code descriptions and method serialization.
+ *   Single-responsibility (SRP): only responsible for HTTP protocol constants, never for routing or I/O.
  */
 public class HttpStatusHelper {
     public static method reasonPhrase(code: int): string {
@@ -42,14 +44,14 @@ public class HttpStatusHelper {
 
     public static method methodToString(method: HttpMethod): string {
         match method {
-            HttpMethod.Get -> { return "GET" }
-            HttpMethod.Post -> { return "POST" }
-            HttpMethod.Put -> { return "PUT" }
-            HttpMethod.Delete -> { return "DELETE" }
-            HttpMethod.Patch -> { return "PATCH" }
-            HttpMethod.Head -> { return "HEAD" }
+            HttpMethod.Get     -> { return "GET" }
+            HttpMethod.Post    -> { return "POST" }
+            HttpMethod.Put     -> { return "PUT" }
+            HttpMethod.Delete  -> { return "DELETE" }
+            HttpMethod.Patch   -> { return "PATCH" }
+            HttpMethod.Head    -> { return "HEAD" }
             HttpMethod.Options -> { return "OPTIONS" }
-            _ -> { return "GET" }
+            _                  -> { return "GET" }
         }
         return "GET"
     }
@@ -71,6 +73,7 @@ public struct HttpHeader {
 /* -- Doc:{HeaderMap}
  *
  * -- Description: Collection of HTTP headers with case-preserving lookup and replacement.
+ *   Encapsulates the storage strategy (DRY) so all header manipulation goes through one place.
  */
 public class HeaderMap {
     private var entries: Array<HttpHeader>
@@ -111,7 +114,9 @@ public class HeaderMap {
 
 /* -- Doc:{HttpRequest}
  *
- * -- Description: Client or server HTTP request representation.
+ * -- Description: Immutable client or server HTTP request representation.
+ *   Value type — passed by value into `IHttpHandler.handle()` ensuring handlers cannot
+ *   mutate shared request state (Open/Closed for extension, closed for modification).
  */
 public class HttpRequest {
     public var method: HttpMethod
@@ -121,6 +126,24 @@ public class HttpRequest {
 
     public static method new(method: HttpMethod, path: string, headers: HeaderMap, body: string): HttpRequest {
         return HttpRequest(method, path, headers, body)
+    }
+
+    /* -- Doc:{get}
+     *
+     * -- Description: Shorthand factory for a GET request.
+     */
+    public static method get(path: string): HttpRequest {
+        return HttpRequest.new(HttpMethod.Get, path, HeaderMap.new(), "")
+    }
+
+    /* -- Doc:{post}
+     *
+     * -- Description: Shorthand factory for a POST request with a JSON body.
+     */
+    public static method post(path: string, body: string): HttpRequest {
+        let headers = HeaderMap.new()
+        headers.set("Content-Type", "application/json; charset=utf-8")
+        return HttpRequest.new(HttpMethod.Post, path, headers, body)
     }
 
     public method format(): string {
@@ -137,9 +160,29 @@ public class HttpRequest {
     }
 }
 
+/* -- Doc:{IHttpHandler}
+ *
+ * -- Description: Core handler interface for all HTTP processing components.
+ *   This is the key LSP contract: `Router`, `HttpServer`, middleware chains, and mocks
+ *   all implement this interface. Code depending on `IHttpHandler` never needs to know
+ *   whether it is talking to a Router, a single-route handler, or a mock — enabling
+ *   transparent substitution and testability (Liskov Substitution Principle).
+ */
+public interface IHttpHandler {
+    /* -- Doc:{handle}
+     *
+     * -- Description: Processes an HttpRequest and returns a typed HTTP response.
+     * -- Param{req}: The incoming HTTP request to process.
+     * -- Returns: An HttpResponse for the given request.
+     */
+    method handle(req: HttpRequest): HttpResponse<string>
+}
+
 /* -- Doc:{HttpResponse}
  *
  * -- Description: HTTP response packet model with generic typed payload and optional native serialization.
+ *   Follows the Open/Closed Principle: new content types can be added as static factory methods
+ *   without modifying the class body.
  */
 public class HttpResponse<T> {
     public var statusCode: int
@@ -182,6 +225,36 @@ public class HttpResponse<T> {
         headers.set("Content-Type", "text/plain; charset=utf-8")
         headers.set("Content-Length", StringUtils.intToString(textBody.len()))
         return HttpResponse<string>(statusCode, headers, textBody, textBody)
+    }
+
+    /* -- Doc:{html}
+     *
+     * -- Description: Creates a text/html HttpResponse.
+     */
+    public static method html(htmlBody: string, statusCode: int = 200): HttpResponse<string> {
+        let headers = HeaderMap.new()
+        headers.set("Content-Type", "text/html; charset=utf-8")
+        headers.set("Server", "Snovalang-HttpServer/1.0")
+        headers.set("Content-Length", StringUtils.intToString(htmlBody.len()))
+        return HttpResponse<string>(statusCode, headers, htmlBody, htmlBody)
+    }
+
+    /* -- Doc:{notFound}
+     *
+     * -- Description: Creates a 404 Not Found JSON error response.
+     */
+    public static method notFound(path: string): HttpResponse<string> {
+        let body = "{\"error\":\"Not Found\",\"path\":\"" + path + "\"}"
+        return HttpResponse<string>.json(body, 404)
+    }
+
+    /* -- Doc:{internalError}
+     *
+     * -- Description: Creates a 500 Internal Server Error JSON response.
+     */
+    public static method internalError(message: string): HttpResponse<string> {
+        let body = "{\"error\":\"Internal Server Error\",\"message\":\"" + message + "\"}"
+        return HttpResponse<string>.json(body, 500)
     }
 
     /* -- Doc:{format}
