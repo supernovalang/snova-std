@@ -1,0 +1,110 @@
+package Snova.Std.Lsp
+
+import Snova.Std.IO
+import Snova.Std.Strings
+
+// ── Posição e Range (0-based conforme especificação Microsoft LSP) ───────────
+
+public struct Position {
+    public let line: int
+    public let character: int
+
+    public static method new(line: int, character: int): Position {
+        return Position(line, character)
+    }
+}
+
+public struct Range {
+    public let start: Position
+    public let end: Position
+
+    public static method new(start: Position, end: Position): Range {
+        return Range(start, end)
+    }
+}
+
+public struct Location {
+    public let uri: string
+    public let range: Range
+
+    public static method new(uri: string, range: Range): Location {
+        return Location(uri, range)
+    }
+}
+
+// ── Diagnósticos do Compilador no LSP ───────────────────────────────────────
+
+enum DiagnosticSeverity {
+    Error        // 1
+    Warning      // 2
+    Information  // 3
+    Hint         // 4
+}
+
+public struct Diagnostic {
+    public let range: Range
+    public let severity: DiagnosticSeverity
+    public let code: string
+    public let source: string
+    public let message: string
+
+    public static method new(range: Range, severity: DiagnosticSeverity, code: string, message: string, source: string = "snovac"): Diagnostic {
+        return Diagnostic(range, severity, code, source, message)
+    }
+}
+
+// ── Mensagens JSON-RPC ──────────────────────────────────────────────────────
+
+public struct RpcRequest {
+    public let id: int
+    public let method: string
+    public let paramsJson: string
+
+    public static method new(id: int, method: string, paramsJson: string = "{}"): RpcRequest {
+        return RpcRequest(id, method, paramsJson)
+    }
+}
+
+public struct RpcResponse {
+    public let id: int
+    public let resultJson: string
+    public let isError: bool
+    public let errorCode: int
+    public let errorMessage: string
+
+    public static method ok(id: int, resultJson: string): RpcResponse {
+        return RpcResponse(id, resultJson, false, 0, "")
+    }
+
+    public static method error(id: int, code: int, message: string): RpcResponse {
+        return RpcResponse(id, "null", true, code, message)
+    }
+}
+
+// ── Transportador JSON-RPC com Framing Content-Length em Snovalang ──────────
+
+public class LspTransport {
+    // Formata o pacote JSON-RPC com o cabeçalho Content-Length
+    public static method formatMessage(jsonPayload: string): string {
+        let lengthStr = StringUtils.intToString(jsonPayload.len())
+        return "Content-Length: " + lengthStr + "\r\n\r\n" + jsonPayload
+    }
+
+    // Extrai o Content-Length de um cabeçalho HTTP/JSON-RPC
+    public static method parseContentLength(headerText: string): Option<int> {
+        let lines = StringUtils.split(headerText, "\n")
+        var i = 0
+        while i < lines.len() {
+            let line = lines[i].trim()
+            if line.startsWith("Content-Length:") {
+                let parts = StringUtils.split(line, ":")
+                if parts.len() >= 2 {
+                    let valStr = parts[1].trim()
+                    return StringUtils.parseInt(valStr)
+                }
+            }
+            i = i + 1
+        }
+        return None
+    }
+}

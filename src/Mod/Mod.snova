@@ -1,0 +1,139 @@
+package Snova.Std.Mod
+
+import Snova.Std.Strings
+
+// ── Versionamento Semântico (SemVer) em Snovalang Puro ───────────────────────
+
+public struct Version {
+    public let major: int
+    public let minor: int
+    public let patch: int
+    public let prerelease: string
+    public let raw: string
+
+    public static method new(major: int, minor: int, patch: int, prerelease: string = "", raw: string = ""): Version {
+        return Version(major, minor, patch, prerelease, raw)
+    }
+
+    public static method parse(vStr: string): Option<Version> {
+        var s = vStr.trim()
+        if s.startsWith("v") {
+            s = s.replaceFirst("v", "")
+        }
+        let parts = StringUtils.split(s, ".")
+        if parts.len() < 3 {
+            return None
+        }
+        let majOpt = StringUtils.parseInt(parts[0])
+        let minOpt = StringUtils.parseInt(parts[1])
+        let patchOpt = StringUtils.parseInt(parts[2])
+
+        match majOpt {
+            Some(maj) -> match minOpt {
+                Some(min) -> match patchOpt {
+                    Some(pat) -> return Some(Version.new(maj, min, pat, "", vStr))
+                    None -> return None
+                }
+                None -> return None
+            }
+            None -> return None
+        }
+    }
+
+    public method isGreaterThan(other: Version): bool {
+        if this.major > other.major { return true }
+        if this.major < other.major { return false }
+        if this.minor > other.minor { return true }
+        if this.minor < other.minor { return false }
+        return this.patch > other.patch
+    }
+
+    public method toString(): string {
+        if this.raw.len() > 0 {
+            return this.raw
+        }
+        let maj = StringUtils.intToString(this.major)
+        let min = StringUtils.intToString(this.minor)
+        let pat = StringUtils.intToString(this.patch)
+        return "v" + maj + "." + min + "." + pat
+    }
+}
+
+// ── Declaração de Dependência de Módulo (snova.mod) ─────────────────────────
+
+public struct ModuleRequire {
+    public let path: string       // ex: "github.com/aggitech/snova-json"
+    public let version: Version   // ex: v1.0.0
+    public let isIndirect: bool
+
+    public static method new(path: string, version: Version, isIndirect: bool = false): ModuleRequire {
+        return ModuleRequire(path, version, isIndirect)
+    }
+}
+
+public class ModFile {
+    public var modulePath: string
+    public var snovaVersion: string
+    public var requires: Array<ModuleRequire>
+
+    public static method new(modulePath: string, snovaVersion: string = "1.0.0"): ModFile {
+        let mf = ModFile()
+        mf.modulePath = modulePath
+        mf.snovaVersion = snovaVersion
+        mf.requires = []
+        return mf
+    }
+
+    public method addRequire(path: string, version: Version, isIndirect: bool = false): int {
+        this.requires.push(ModuleRequire.new(path, version, isIndirect))
+        return 0
+    }
+
+    public method format(): string {
+        var out = "module " + this.modulePath + "\n\n"
+        out = out + "snova " + this.snovaVersion + "\n\n"
+        out = out + "require (\n"
+        var i = 0
+        while i < this.requires.len() {
+            let req = this.requires[i]
+            let indir = req.isIndirect ? " // indirect" : ""
+            out = out + "    " + req.path + " " + req.version.toString() + indir + "\n"
+            i = i + 1
+        }
+        out = out + ")\n"
+        return out
+    }
+}
+
+// ── Resolução de Provedores Git ─────────────────────────────────────────────
+
+enum GitProviderKind {
+    GitHub
+    GitLab
+    Bitbucket
+    CustomGit
+}
+
+public class GitProviderResolver {
+    public static method detectProvider(url: string): GitProviderKind {
+        if url.startsWith("github.com/") {
+            return GitProviderKind.GitHub
+        } else if url.startsWith("gitlab.com/") {
+            return GitProviderKind.GitLab
+        } else if url.startsWith("bitbucket.org/") {
+            return GitProviderKind.Bitbucket
+        }
+        return GitProviderKind.CustomGit
+    }
+
+    public static method getCloneUrl(modulePath: string): string {
+        if modulePath.startsWith("http://") || modulePath.startsWith("https://") || modulePath.startsWith("git@") {
+            return modulePath
+        }
+        return "https://" + modulePath + ".git"
+    }
+
+    public static method getCacheDirectory(cacheRoot: string, modulePath: string, version: Version): string {
+        return cacheRoot + "/pkg/mod/" + modulePath + "@" + version.toString()
+    }
+}

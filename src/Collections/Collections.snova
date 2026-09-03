@@ -1,0 +1,207 @@
+package Snova.Std.Collections
+
+// ── Lista Dinâmica (ArrayList) ──────────────────────────────────────────────
+
+public class List {
+    private var items: Array<string>
+
+    public static method new(): List {
+        let l = List()
+        l.items = []
+        return l
+    }
+
+    public method add(item: string): int {
+        this.items.push(item)
+        return this.items.len()
+    }
+
+    public method get(index: int): Option<string> {
+        if index < 0 || index >= this.items.len() {
+            return None
+        }
+        return Some(this.items[index])
+    }
+
+    public method set(index: int, item: string): bool {
+        if index < 0 || index >= this.items.len() {
+            return false
+        }
+        this.items[index] = item
+        return true
+    }
+
+    public method len(): int {
+        return this.items.len()
+    }
+
+    public method isEmpty(): bool {
+        return this.items.len() == 0
+    }
+
+    public method clear(): int {
+        this.items = []
+        return 0
+    }
+
+    public method contains(target: string): bool {
+        var i = 0
+        while i < this.items.len() {
+            if this.items[i] == target {
+                return true
+            }
+            i = i + 1
+        }
+        return false
+    }
+
+    public method all(): Array<string> {
+        return this.items
+    }
+}
+
+// ── Tabela Hash / Dicionário (Map) ──────────────────────────────────────────
+
+public struct MapEntry {
+    public let key: string
+    public let value: string
+
+    public static method new(key: string, value: string): MapEntry {
+        return MapEntry(key, value)
+    }
+}
+
+public class Map {
+    private var entries: Array<MapEntry>
+
+    public static method new(): Map {
+        let m = Map()
+        m.entries = []
+        return m
+    }
+
+    public method put(key: string, value: string): int {
+        var i = 0
+        while i < this.entries.len() {
+            if this.entries[i].key == key {
+                this.entries[i] = MapEntry.new(key, value)
+                return 0
+            }
+            i = i + 1
+        }
+        this.entries.push(MapEntry.new(key, value))
+        return 0
+    }
+
+    public method get(key: string): Option<string> {
+        var i = 0
+        while i < this.entries.len() {
+            if this.entries[i].key == key {
+                return Some(this.entries[i].value)
+            }
+            i = i + 1
+        }
+        return None
+    }
+
+    public method has(key: string): bool {
+        var i = 0
+        while i < this.entries.len() {
+            if this.entries[i].key == key {
+                return true
+            }
+            i = i + 1
+        }
+        return false
+    }
+
+    public method len(): int {
+        return this.entries.len()
+    }
+
+    public method all(): Array<MapEntry> {
+        return this.entries
+    }
+}
+
+// ── Conjunto (Set) ──────────────────────────────────────────────────────────
+
+public class Set {
+    private var elements: Array<string>
+
+    public static method new(): Set {
+        let s = Set()
+        s.elements = []
+        return s
+    }
+
+    public method add(element: string): bool {
+        if this.contains(element) {
+            return false
+        }
+        this.elements.push(element)
+        return true
+    }
+
+    public method contains(element: string): bool {
+        var i = 0
+        while i < this.elements.len() {
+            if this.elements[i] == element {
+                return true
+            }
+            i = i + 1
+        }
+        return false
+    }
+
+    public method len(): int {
+        return this.elements.len()
+    }
+
+    public method all(): Array<string> {
+        return this.elements
+    }
+}
+
+// ── Fila (Queue) ────────────────────────────────────────────────────────────
+
+public class Queue {
+    private var items: Array<string>
+    private var head: int
+
+    public static method new(): Queue {
+        let q = Queue()
+        q.items = []
+        q.head = 0
+        return q
+    }
+
+    public method enqueue(item: string): int {
+        this.items.push(item)
+        return this.len()
+    }
+
+    public method dequeue(): Option<string> {
+        if this.head >= this.items.len() {
+            return None
+        }
+        let item = this.items[this.head]
+        this.head = this.head + 1
+        return Some(item)
+    }
+
+    public method peek(): Option<string> {
+        if this.head >= this.items.len() {
+            return None
+        }
+        return Some(this.items[this.head])
+    }
+
+    public method len(): int {
+        return this.items.len() - this.head
+    }
+
+    public method isEmpty(): bool {
+        return this.len() == 0
+    }
+}

@@ -1,0 +1,175 @@
+package Snova.Std.IO
+
+// ── Erros de Entrada e Saída ──────────────────────────────────────────────────
+
+enum IOError {
+    UnexpectedEOF
+    ClosedStream
+    BufferOverflow(size: int, limit: int)
+    PermissionDenied(path: string)
+    NotFound(path: string)
+    AlreadyExists(path: string)
+    Timeout
+    BrokenPipe
+    Custom(message: string)
+}
+
+// ── Contratos de Streams (Interfaces) ─────────────────────────────────────────
+
+// Reader representa um fluxo sequencial de leitura de bytes.
+interface Reader {
+    method read(buffer: Array<int>, offset: int, count: int): Result<int, IOError>
+}
+
+// Writer representa um fluxo sequencial de escrita de bytes.
+interface Writer {
+    method write(buffer: Array<int>, offset: int, count: int): Result<int, IOError>
+    method flush(): Result<int, IOError>
+}
+
+// Closer define recursos que necessitam de fechamento determinístico.
+interface Closer {
+    method close(): Result<int, IOError>
+}
+
+// ── Funções Utilitárias de I/O ───────────────────────────────────────────────
+
+// Copia todos os dados de `src` para `dst` até o final do fluxo (EOF).
+func copy(src: Reader, dst: Writer, bufferSize: int): Result<int, IOError> {
+    var totalBytes = 0
+    let tempBuf: Array<int> = []
+    
+    var i = 0
+    while i < bufferSize {
+        tempBuf.push(0)
+        i = i + 1
+    }
+
+    while true {
+        let readResult = src.read(tempBuf, 0, bufferSize)
+        match readResult {
+            Ok(bytesRead) -> {
+                if bytesRead <= 0 {
+                    break
+                }
+                let writeResult = dst.write(tempBuf, 0, bytesRead)
+                match writeResult {
+                    Ok(bytesWritten) -> {
+                        totalBytes = totalBytes + bytesWritten
+                    }
+                    Err(err) -> return Err(err)
+                }
+            }
+            Err(err) -> match err {
+                IOError.UnexpectedEOF -> break
+                _ -> return Err(err)
+            }
+        }
+    }
+
+    let flushRes = dst.flush()
+    match flushRes {
+        Ok(f) -> return Ok(totalBytes)
+        Err(e) -> return Err(e)
+    }
+}
+
+// ── Stream de Buffer em Memória ─────────────────────────────────────────────
+
+public class ByteBuffer {
+    private var data: Array<int>
+    private var readPos: int
+    private var isClosed: bool
+
+    public static method new(): ByteBuffer {
+        let b = ByteBuffer()
+        b.data = []
+        b.readPos = 0
+        b.isClosed = false
+        return b
+    }
+
+    public method write(buffer: Array<int>, offset: int, count: int): Result<int, IOError> {
+        if this.isClosed {
+            return Err(IOError.ClosedStream)
+        }
+        var i = 0
+        while i < count {
+            let byteVal = buffer[offset + i]
+            this.data.push(byteVal)
+            i = i + 1
+        }
+        return Ok(count)
+    }
+
+    public method writeByte(byte: int): Result<int, IOError> {
+        if this.isClosed {
+            return Err(IOError.ClosedStream)
+        }
+        this.data.push(byte)
+        return Ok(1)
+    }
+
+    public method writeString(text: string): Result<int, IOError> {
+        if this.isClosed {
+            return Err(IOError.ClosedStream)
+        }
+        let textLen = text.len()
+        var i = 0
+        while i < textLen {
+            let optCh = text.charAt(i)
+            match optCh {
+                Some(ch) -> {
+                    this.data.push(1)
+                }
+                None -> break
+            }
+            i = i + 1
+        }
+        return Ok(textLen)
+    }
+
+    public method read(buffer: Array<int>, offset: int, count: int): Result<int, IOError> {
+        if this.isClosed {
+            return Err(IOError.ClosedStream)
+        }
+        let available = this.data.len() - this.readPos
+        if available <= 0 {
+            return Ok(0)
+        }
+        var toRead = count
+        if toRead > available {
+            toRead = available
+        }
+        var i = 0
+        while i < toRead {
+            buffer[offset + i] = this.data[this.readPos + i]
+            i = i + 1
+        }
+        this.readPos = this.readPos + toRead
+        return Ok(toRead)
+    }
+
+    public method flush(): Result<int, IOError> {
+        return Ok(0)
+    }
+
+    public method close(): Result<int, IOError> {
+        this.isClosed = true
+        return Ok(0)
+    }
+
+    public method len(): int {
+        return this.data.len() - this.readPos
+    }
+
+    public method isEOF(): bool {
+        return this.readPos >= this.data.len()
+    }
+
+    public method reset(): int {
+        this.data = []
+        this.readPos = 0
+        return 0
+    }
+}

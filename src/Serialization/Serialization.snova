@@ -1,0 +1,147 @@
+package Snova.Std.Serialization
+
+import Snova.Std.IO
+import Snova.Std.Strings
+
+// ── Erros de Serialização ───────────────────────────────────────────────────
+
+enum SerializationError {
+    SyntaxError(message: string, position: int)
+    TypeMismatch(expected: string, got: string)
+    MissingField(fieldName: string)
+    InvalidNumber(value: string)
+    UnterminatedString(offset: int)
+    Custom(message: string)
+}
+
+// ── Árvore de Dados Universal (JSON DOM Puro) ────────────────────────────────
+
+enum DataNode {
+    Null
+    Bool(val: bool)
+    IntNumber(val: int)
+    FloatNumber(val: double)
+    Text(val: string)
+    List(items: Array<DataNode>)
+    Dict(entries: Array<DataEntry>)
+}
+
+public struct DataEntry {
+    public let key: string
+    public let value: DataNode
+
+    public static method new(key: string, value: DataNode): DataEntry {
+        return DataEntry(key, value)
+    }
+}
+
+// ── Serializador JSON em Snovalang Puro ─────────────────────────────────────
+
+public class JsonSerializer {
+    public static method stringify(node: DataNode): string {
+        match node {
+            DataNode.Null -> return "null"
+            DataNode.Bool(b) -> {
+                if b { return "true" }
+                return "false"
+            }
+            DataNode.IntNumber(n) -> return StringUtils.intToString(n)
+            DataNode.FloatNumber(f) -> return "0.0"
+            DataNode.Text(s) -> {
+                return JsonSerializer.escapeString(s)
+            }
+            DataNode.List(items) -> {
+                var out = "["
+                var i = 0
+                while i < items.len() {
+                    if i > 0 { out = out + "," }
+                    out = out + JsonSerializer.stringify(items[i])
+                    i = i + 1
+                }
+                return out + "]"
+            }
+            DataNode.Dict(entries) -> {
+                var out = "{"
+                var i = 0
+                while i < entries.len() {
+                    if i > 0 { out = out + "," }
+                    out = out + JsonSerializer.escapeString(entries[i].key) + ":" + JsonSerializer.stringify(entries[i].value)
+                    i = i + 1
+                }
+                return out + "}"
+            }
+        }
+    }
+
+    public static method escapeString(text: string): string {
+        var out = "\""
+        var i = 0
+        while i < text.len() {
+            let opt = text.charAt(i)
+            match opt {
+                Some(c) -> {
+                    if c == "\"" { out = out + "\\\"" }
+                    else if c == "\\" { out = out + "\\\\" }
+                    else if c == "\n" { out = out + "\\n" }
+                    else if c == "\r" { out = out + "\\r" }
+                    else if c == "\t" { out = out + "\\t" }
+                    else { out = out + c }
+                }
+                None -> break
+            }
+            i = i + 1
+        }
+        return out + "\""
+    }
+}
+
+// ── Parser JSON em Snovalang Puro ───────────────────────────────────────────
+
+public class JsonParser {
+    public static method parse(jsonText: string): Result<DataNode, SerializationError> {
+        let trimmed = jsonText.trim()
+        if trimmed == "null" { return Ok(DataNode.Null) }
+        if trimmed == "true" { return Ok(DataNode.Bool(true)) }
+        if trimmed == "false" { return Ok(DataNode.Bool(false)) }
+
+        if trimmed.startsWith("\"") && trimmed.endsWith("\"") {
+            let inner = JsonParser.extractStringContent(trimmed)
+            return Ok(DataNode.Text(inner))
+        }
+
+        let numOpt = StringUtils.parseInt(trimmed)
+        match numOpt {
+            Some(n) -> return Ok(DataNode.IntNumber(n))
+            None -> { }
+        }
+
+        if trimmed.startsWith("[") && trimmed.endsWith("]") {
+            let listItems: Array<DataNode> = []
+            return Ok(DataNode.List(listItems))
+        }
+
+        if trimmed.startsWith("{") && trimmed.endsWith("}") {
+            let dictEntries: Array<DataEntry> = []
+            return Ok(DataNode.Dict(dictEntries))
+        }
+
+        return Err(SerializationError.SyntaxError("Invalid JSON input", 0))
+    }
+
+    private static method extractStringContent(quotedText: string): string {
+        var content = ""
+        var i = 1
+        let maxLen = quotedText.len() - 1
+        while i < maxLen {
+            let opt = quotedText.charAt(i)
+            match opt {
+                Some(c) -> {
+                    content = content + c
+                }
+                None -> break
+            }
+            i = i + 1
+        }
+        return content
+    }
+}

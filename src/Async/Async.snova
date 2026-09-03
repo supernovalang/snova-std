@@ -1,0 +1,57 @@
+package Snova.Std.Async
+
+// ── Estado de Execução Assíncrona ───────────────────────────────────────────
+
+enum TaskState {
+    Pending
+    Running
+    Completed
+    Failed(reason: string)
+    Cancelled
+}
+
+// ── Canal de Comunicação Concorrente (Channel / Pulsar) ──────────────────────
+
+public class Channel {
+    private var buffer: Array<string>
+    private var isClosed: bool
+
+    public static method new(): Channel {
+        let ch = Channel()
+        ch.buffer = []
+        ch.isClosed = false
+        return ch
+    }
+
+    public method send(message: string): bool {
+        if this.isClosed {
+            return false
+        }
+        this.buffer.push(message)
+        return true
+    }
+
+    public method receive(): Option<string> {
+        if this.buffer.len() == 0 {
+            return None
+        }
+        let msg = this.buffer[0]
+        let newBuf: Array<string> = []
+        var i = 1
+        while i < this.buffer.len() {
+            newBuf.push(this.buffer[i])
+            i = i + 1
+        }
+        this.buffer = newBuf
+        return Some(msg)
+    }
+
+    public method close(): bool {
+        this.isClosed = true
+        return true
+    }
+
+    public method len(): int {
+        return this.buffer.len()
+    }
+}

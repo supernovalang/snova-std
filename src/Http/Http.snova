@@ -1,0 +1,166 @@
+package Snova.Std.Http
+
+import Snova.Std.IO
+import Snova.Std.Strings
+
+// ── Métodos HTTP ────────────────────────────────────────────────────────────
+
+enum HttpMethod {
+    Get
+    Post
+    Put
+    Delete
+    Patch
+    Head
+    Options
+}
+
+// ── Códigos e Nomes de Status HTTP ──────────────────────────────────────────
+
+public class HttpStatusHelper {
+    public static method reasonPhrase(code: int): string {
+        if code == 200 { return "OK" }
+        if code == 201 { return "Created" }
+        if code == 204 { return "No Content" }
+        if code == 301 { return "Moved Permanently" }
+        if code == 302 { return "Found" }
+        if code == 400 { return "Bad Request" }
+        if code == 401 { return "Unauthorized" }
+        if code == 403 { return "Forbidden" }
+        if code == 404 { return "Not Found" }
+        if code == 405 { return "Method Not Allowed" }
+        if code == 500 { return "Internal Server Error" }
+        if code == 502 { return "Bad Gateway" }
+        if code == 503 { return "Service Unavailable" }
+        return "Unknown Status"
+    }
+
+    public static method methodToString(method: HttpMethod): string {
+        match method {
+            HttpMethod.Get -> return "GET"
+            HttpMethod.Post -> return "POST"
+            HttpMethod.Put -> return "PUT"
+            HttpMethod.Delete -> return "DELETE"
+            HttpMethod.Patch -> return "PATCH"
+            HttpMethod.Head -> return "HEAD"
+            HttpMethod.Options -> return "OPTIONS"
+        }
+    }
+}
+
+// ── Cabeçalhos HTTP ─────────────────────────────────────────────────────────
+
+public struct HttpHeader {
+    public let name: string
+    public let value: string
+
+    public static method new(name: string, value: string): HttpHeader {
+        return HttpHeader(name, value)
+    }
+}
+
+public class HeaderMap {
+    private var entries: Array<HttpHeader>
+
+    public static method new(): HeaderMap {
+        let hm = HeaderMap()
+        hm.entries = []
+        return hm
+    }
+
+    public method set(name: string, value: string): int {
+        var i = 0
+        while i < this.entries.len() {
+            if this.entries[i].name == name {
+                this.entries[i] = HttpHeader.new(name, value)
+                return 0
+            }
+            i = i + 1
+        }
+        this.entries.push(HttpHeader.new(name, value))
+        return 0
+    }
+
+    public method get(name: string): Option<string> {
+        var i = 0
+        while i < this.entries.len() {
+            if this.entries[i].name == name {
+                return Some(this.entries[i].value)
+            }
+            i = i + 1
+        }
+        return None
+    }
+
+    public method all(): Array<HttpHeader> {
+        return this.entries
+    }
+}
+
+// ── Requisição e Resposta HTTP em Snovalang Puro ────────────────────────────
+
+public class HttpRequest {
+    public var method: HttpMethod
+    public var path: string
+    public var headers: HeaderMap
+    public var body: string
+
+    public static method new(method: HttpMethod, path: string, headers: HeaderMap, body: string): HttpRequest {
+        let req = HttpRequest()
+        req.method = method
+        req.path = path
+        req.headers = headers
+        req.body = body
+        return req
+    }
+
+    // Serializa a requisição completa em formato wire HTTP/1.1
+    public method format(): string {
+        let methodStr = HttpStatusHelper.methodToString(this.method)
+        var out = methodStr + " " + this.path + " HTTP/1.1\r\n"
+        let allHeaders = this.headers.all()
+        var i = 0
+        while i < allHeaders.len() {
+            out = out + allHeaders[i].name + ": " + allHeaders[i].value + "\r\n"
+            i = i + 1
+        }
+        out = out + "\r\n" + this.body
+        return out
+    }
+}
+
+public class HttpResponse {
+    public var statusCode: int
+    public var headers: HeaderMap
+    public var body: string
+
+    public static method new(statusCode: int, headers: HeaderMap, body: string): HttpResponse {
+        let res = HttpResponse()
+        res.statusCode = statusCode
+        res.headers = headers
+        res.body = body
+        return res
+    }
+
+    public static method json(jsonText: string, statusCode: int = 200): HttpResponse {
+        let hm = HeaderMap.new()
+        hm.set("Content-Type", "application/json; charset=utf-8")
+        hm.set("Content-Length", StringUtils.intToString(jsonText.len()))
+        return HttpResponse.new(statusCode, hm, jsonText)
+    }
+
+    // Serializa a resposta completa em formato wire HTTP/1.1
+    public method format(): string {
+        let reason = HttpStatusHelper.reasonPhrase(this.statusCode)
+        let statusStr = StringUtils.intToString(this.statusCode)
+        var out = "HTTP/1.1 " + statusStr + " " + reason + "\r\n"
+        let allHeaders = this.headers.all()
+        var i = 0
+        while i < allHeaders.len() {
+            out = out + allHeaders[i].name + ": " + allHeaders[i].value + "\r\n"
+            i = i + 1
+        }
+        out = out + "\r\n" + this.body
+        return out
+    }
+}
