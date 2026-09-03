@@ -40,12 +40,14 @@ public class Channel<T> {
             return None
         }
         let item = this.buffer[0]
-        var i = 0
-        while i < this.buffer.len() - 1 {
-            this.buffer[i] = this.buffer[i + 1]
+        var newBuf: Array<T> = []
+        var i = 1
+        let total = this.buffer.len()
+        while i < total {
+            newBuf.push(this.buffer[i])
             i = i + 1
         }
-        this.buffer.pop()
+        this.buffer = newBuf
         return Some(item)
     }
 

@@ -2,7 +2,7 @@ package Snova.Std.Collections
 
 /* -- Doc:{List}
  *
- * -- Description: Dynamic resizable array list collection in pure Snovalang.
+ * -- Description: Dynamic resizable array list collection implemented in pure Snovalang.
  */
 public class List<T> {
     private var items: Array<T>
@@ -37,12 +37,32 @@ public class List<T> {
             return None
         }
         let item = this.items[index]
-        var i = index
-        while i < this.items.len() - 1 {
-            this.items[i] = this.items[i + 1]
+        var newItems: Array<T> = []
+        var i = 0
+        let total = this.items.len()
+        while i < total {
+            if i != index {
+                newItems.push(this.items[i])
+            }
             i = i + 1
         }
-        this.items.pop()
+        this.items = newItems
+        return Some(item)
+    }
+
+    public method pop(): Option<T> {
+        if this.items.len() == 0 {
+            return None
+        }
+        let lastIdx = this.items.len() - 1
+        let item = this.items[lastIdx]
+        var newItems: Array<T> = []
+        var i = 0
+        while i < lastIdx {
+            newItems.push(this.items[i])
+            i = i + 1
+        }
+        this.items = newItems
         return Some(item)
     }
 
@@ -55,7 +75,8 @@ public class List<T> {
     }
 
     public method clear(): int {
-        this.items.clear()
+        let empty: Array<T> = []
+        this.items = empty
         return 0
     }
 
@@ -123,6 +144,16 @@ public class Map<K, V> {
         return this.entries.len()
     }
 
+    public method isEmpty(): bool {
+        return this.entries.len() == 0
+    }
+
+    public method clear(): int {
+        let empty: Array<MapEntry<K, V>> = []
+        this.entries = empty
+        return 0
+    }
+
     public method all(): Array<MapEntry<K, V>> {
         return this.entries
     }
@@ -160,6 +191,16 @@ public class Set<T> {
         return this.elements.len()
     }
 
+    public method isEmpty(): bool {
+        return this.elements.len() == 0
+    }
+
+    public method clear(): int {
+        let empty: Array<T> = []
+        this.elements = empty
+        return 0
+    }
+
     public method all(): Array<T> {
         return this.elements
     }
@@ -194,5 +235,12 @@ public class Queue<T> {
 
     public method isEmpty(): bool {
         return this.len() == 0
+    }
+
+    public method clear(): int {
+        let empty: Array<T> = []
+        this.items = empty
+        this.head = 0
+        return 0
     }
 }
