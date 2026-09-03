@@ -1,9 +1,2 @@
-build/
-bin/
-out/
-dist/
-node_modules/
 .DS_Store
-*.o
-*.d
-*.a
+*.tmp
