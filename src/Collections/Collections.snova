@@ -4,56 +4,27 @@ package Snova.Std.Collections
  *
  * -- Description: Dynamic resizable array list collection in pure Snovalang.
  */
-public class List {
-    private var items: Array<string>
+public class List<T> {
+    private var items: Array<T>
 
-    /* -- Doc:{new}
-     *
-     * -- Description: Creates an empty List instance.
-     *
-     * -- Returns: New List object.
-     */
-    public static method new(): List {
-        let l = List()
-        l.items = []
-        return l
+    public static method new(): List<T> {
+        let empty: Array<T> = []
+        return List<T>(empty)
     }
 
-    /* -- Doc:{add}
-     *
-     * -- Description: Appends an item to the end of the list.
-     *
-     * -- Param{item}: Element to append.
-     * -- Returns: New length of the list.
-     */
-    public method add(item: string): int {
+    public method add(item: T): int {
         this.items.push(item)
         return this.items.len()
     }
 
-    /* -- Doc:{get}
-     *
-     * -- Description: Retrieves the element at the specified index.
-     *
-     * -- Param{index}: Zero-based index.
-     * -- Returns: Option with value or None if out of bounds.
-     */
-    public method get(index: int): Option<string> {
+    public method get(index: int): Option<T> {
         if index < 0 || index >= this.items.len() {
             return None
         }
         return Some(this.items[index])
     }
 
-    /* -- Doc:{set}
-     *
-     * -- Description: Updates the element at index.
-     *
-     * -- Param{index}: Target index.
-     * -- Param{item}: New element value.
-     * -- Returns: True if updated, false if out of bounds.
-     */
-    public method set(index: int, item: string): bool {
+    public method set(index: int, item: T): bool {
         if index < 0 || index >= this.items.len() {
             return false
         }
@@ -61,117 +32,59 @@ public class List {
         return true
     }
 
-    /* -- Doc:{len}
-     *
-     * -- Description: Returns total count of elements in the list.
-     *
-     * -- Returns: Integer size.
-     */
+    public method removeAt(index: int): Option<T> {
+        if index < 0 || index >= this.items.len() {
+            return None
+        }
+        let item = this.items[index]
+        var i = index
+        while i < this.items.len() - 1 {
+            this.items[i] = this.items[i + 1]
+            i = i + 1
+        }
+        this.items.pop()
+        return Some(item)
+    }
+
     public method len(): int {
         return this.items.len()
     }
 
-    /* -- Doc:{isEmpty}
-     *
-     * -- Description: Checks whether list contains zero elements.
-     *
-     * -- Returns: True if empty.
-     */
     public method isEmpty(): bool {
         return this.items.len() == 0
     }
 
-    /* -- Doc:{clear}
-     *
-     * -- Description: Removes all items from the list.
-     *
-     * -- Returns: 0.
-     */
     public method clear(): int {
-        this.items = []
+        this.items.clear()
         return 0
     }
 
-    /* -- Doc:{contains}
-     *
-     * -- Description: Searches for target element in the list.
-     *
-     * -- Param{target}: Item to find.
-     * -- Returns: True if found.
-     */
-    public method contains(target: string): bool {
-        var i = 0
-        while i < this.items.len() {
-            if this.items[i] == target {
-                return true
-            }
-            i = i + 1
-        }
-        return false
-    }
-
-    /* -- Doc:{all}
-     *
-     * -- Description: Returns internal array of all items.
-     *
-     * -- Returns: Array of elements.
-     */
-    public method all(): Array<string> {
+    public method all(): Array<T> {
         return this.items
     }
 }
 
-/* -- Doc:{MapEntry}
- *
- * -- Description: Key-value pair entry stored inside Map.
- */
-public struct MapEntry {
-    public let key: string
-    public let value: string
+public struct MapEntry<K, V> {
+    public var key: K
+    public var value: V
 
-    /* -- Doc:{new}
-     *
-     * -- Description: Constructs a MapEntry.
-     *
-     * -- Param{key}: Entry key.
-     * -- Param{value}: Entry value.
-     * -- Returns: MapEntry struct.
-     */
-    public static method new(key: string, value: string): MapEntry {
-        return MapEntry(key, value)
+    public static method new(key: K, value: V): MapEntry<K, V> {
+        return MapEntry<K, V>(key, value)
     }
 }
 
-/* -- Doc:{Map}
- *
- * -- Description: Key-value associative mapping dictionary in pure Snovalang.
- */
-public class Map {
-    private var entries: Array<MapEntry>
+public class Map<K, V> {
+    private var entries: Array<MapEntry<K, V>>
 
-    /* -- Doc:{new}
-     *
-     * -- Description: Creates a new empty Map instance.
-     *
-     * -- Returns: New Map.
-     */
-    public static method new(): Map {
-        let m = Map()
-        m.entries = []
-        return m
+    public static method new(): Map<K, V> {
+        let empty: Array<MapEntry<K, V>> = []
+        return Map<K, V>(empty)
     }
 
-    /* -- Doc:{put}
-     *
-     * -- Description: Associates key with value, updating existing entry if key exists.
-     *
-     * -- Param{key}: Association key.
-     * -- Param{value}: Associated value.
-     * -- Returns: 0.
-     */
-    public method put(key: string, value: string): int {
+    public method put(key: K, value: V): int {
         var i = 0
-        while i < this.entries.len() {
+        let total = this.entries.len()
+        while i < total {
             if this.entries[i].key == key {
                 this.entries[i] = MapEntry.new(key, value)
                 return 0
@@ -182,16 +95,10 @@ public class Map {
         return 0
     }
 
-    /* -- Doc:{get}
-     *
-     * -- Description: Looks up value for given key.
-     *
-     * -- Param{key}: Lookup key.
-     * -- Returns: Option with value or None.
-     */
-    public method get(key: string): Option<string> {
+    public method get(key: K): Option<V> {
         var i = 0
-        while i < this.entries.len() {
+        let total = this.entries.len()
+        while i < total {
             if this.entries[i].key == key {
                 return Some(this.entries[i].value)
             }
@@ -200,16 +107,10 @@ public class Map {
         return None
     }
 
-    /* -- Doc:{has}
-     *
-     * -- Description: Checks if key exists in mapping.
-     *
-     * -- Param{key}: Key to check.
-     * -- Returns: True if key exists.
-     */
-    public method has(key: string): bool {
+    public method has(key: K): bool {
         var i = 0
-        while i < this.entries.len() {
+        let total = this.entries.len()
+        while i < total {
             if this.entries[i].key == key {
                 return true
             }
@@ -218,54 +119,24 @@ public class Map {
         return false
     }
 
-    /* -- Doc:{len}
-     *
-     * -- Description: Returns number of entries in map.
-     *
-     * -- Returns: Integer size.
-     */
     public method len(): int {
         return this.entries.len()
     }
 
-    /* -- Doc:{all}
-     *
-     * -- Description: Returns all key-value entries.
-     *
-     * -- Returns: Array of MapEntry.
-     */
-    public method all(): Array<MapEntry> {
+    public method all(): Array<MapEntry<K, V>> {
         return this.entries
     }
 }
 
-/* -- Doc:{Set}
- *
- * -- Description: Collection of unique elements.
- */
-public class Set {
-    private var elements: Array<string>
+public class Set<T> {
+    private var elements: Array<T>
 
-    /* -- Doc:{new}
-     *
-     * -- Description: Creates an empty Set.
-     *
-     * -- Returns: Set instance.
-     */
-    public static method new(): Set {
-        let s = Set()
-        s.elements = []
-        return s
+    public static method new(): Set<T> {
+        let empty: Array<T> = []
+        return Set<T>(empty)
     }
 
-    /* -- Doc:{add}
-     *
-     * -- Description: Adds element if not already present.
-     *
-     * -- Param{element}: Item to insert.
-     * -- Returns: True if element was newly inserted.
-     */
-    public method add(element: string): bool {
+    public method add(element: T): bool {
         if this.contains(element) {
             return false
         }
@@ -273,16 +144,10 @@ public class Set {
         return true
     }
 
-    /* -- Doc:{contains}
-     *
-     * -- Description: Checks if element is in set.
-     *
-     * -- Param{element}: Target item.
-     * -- Returns: True if present.
-     */
-    public method contains(element: string): bool {
+    public method contains(element: T): bool {
         var i = 0
-        while i < this.elements.len() {
+        let total = this.elements.len()
+        while i < total {
             if this.elements[i] == element {
                 return true
             }
@@ -291,67 +156,30 @@ public class Set {
         return false
     }
 
-    /* -- Doc:{len}
-     *
-     * -- Description: Returns number of elements in set.
-     *
-     * -- Returns: Size count.
-     */
     public method len(): int {
         return this.elements.len()
     }
 
-    /* -- Doc:{all}
-     *
-     * -- Description: Returns all elements as array.
-     *
-     * -- Returns: Array of items.
-     */
-    public method all(): Array<string> {
+    public method all(): Array<T> {
         return this.elements
     }
 }
 
-/* -- Doc:{Queue}
- *
- * -- Description: First-in, first-out (FIFO) queue collection.
- */
-public class Queue {
-    private var items: Array<string>
+public class Queue<T> {
+    private var items: Array<T>
     private var head: int
 
-    /* -- Doc:{new}
-     *
-     * -- Description: Constructs an empty FIFO Queue.
-     *
-     * -- Returns: Queue instance.
-     */
-    public static method new(): Queue {
-        let q = Queue()
-        q.items = []
-        q.head = 0
-        return q
+    public static method new(): Queue<T> {
+        let empty: Array<T> = []
+        return Queue<T>(empty, 0)
     }
 
-    /* -- Doc:{enqueue}
-     *
-     * -- Description: Pushes an element into the back of the queue.
-     *
-     * -- Param{item}: Element to enqueue.
-     * -- Returns: Total elements count.
-     */
-    public method enqueue(item: string): int {
+    public method enqueue(item: T): int {
         this.items.push(item)
         return this.len()
     }
 
-    /* -- Doc:{dequeue}
-     *
-     * -- Description: Pops and returns the front element.
-     *
-     * -- Returns: Option with front item or None if empty.
-     */
-    public method dequeue(): Option<string> {
+    public method dequeue(): Option<T> {
         if this.head >= this.items.len() {
             return None
         }
@@ -360,35 +188,10 @@ public class Queue {
         return Some(item)
     }
 
-    /* -- Doc:{peek}
-     *
-     * -- Description: Returns front element without removing it.
-     *
-     * -- Returns: Option with front item or None.
-     */
-    public method peek(): Option<string> {
-        if this.head >= this.items.len() {
-            return None
-        }
-        return Some(this.items[this.head])
-    }
-
-    /* -- Doc:{len}
-     *
-     * -- Description: Returns active queue length.
-     *
-     * -- Returns: Integer length.
-     */
     public method len(): int {
         return this.items.len() - this.head
     }
 
-    /* -- Doc:{isEmpty}
-     *
-     * -- Description: Checks if queue has no elements.
-     *
-     * -- Returns: True if empty.
-     */
     public method isEmpty(): bool {
         return this.len() == 0
     }

@@ -1,144 +1,107 @@
 package Snova.Std.Serialization
 
-import Snova.Std.IO
 import Snova.Std.Strings
+import Snova.Std.Collections
 
 /* -- Doc:{SerializationError}
  *
- * -- Description: Error categories arising during serialization or deserialization processes.
+ * -- Description: Structured error types for parsing and serialization failures.
  */
 enum SerializationError {
-    SyntaxError(message: string, position: int)
-    TypeMismatch(expected: string, got: string)
-    MissingField(fieldName: string)
-    InvalidNumber(value: string)
-    UnterminatedString(offset: int)
-    Custom(message: string)
+    SyntaxError(message: string, line: int)
+    InvalidData(reason: string)
+    TypeMismatch(expected: string, found: string)
 }
 
-/* -- Doc:{DataNode}
- *
- * -- Description: Universal dynamically-typed data tree representing JSON-like structured data.
- */
-enum DataNode {
-    Null
-    Bool(val: bool)
-    IntNumber(val: int)
-    FloatNumber(val: double)
-    Text(val: string)
-    List(items: Array<DataNode>)
-    Dict(entries: Array<DataEntry>)
-}
-
-/* -- Doc:{DataEntry}
- *
- * -- Description: Key-value pair entry inside a dictionary data node.
- */
 public struct DataEntry {
-    public let key: string
-    public let value: DataNode
+    public var key: string
+    public var value: DataNode
 
-    /* -- Doc:{new}
-     *
-     * -- Description: Creates a key-value data entry.
-     *
-     * -- Param{key}: Field key name.
-     * -- Param{value}: DataNode value.
-     * -- Returns: Initialized DataEntry.
-     */
     public static method new(key: string, value: DataNode): DataEntry {
         return DataEntry(key, value)
     }
 }
 
-/* -- Doc:{JsonSerializer}
- *
- * -- Description: Serializer producing formatted JSON strings from DataNode trees.
- */
+enum DataNode {
+    Null
+    Bool(value: bool)
+    IntNumber(value: int)
+    FloatNumber(value: double)
+    Text(value: string)
+    List(items: Array<DataNode>)
+    Dict(entries: Array<DataEntry>)
+}
+
 public class JsonSerializer {
-    /* -- Doc:{stringify}
-     *
-     * -- Description: Converts a DataNode AST into a valid compact JSON string.
-     *
-     * -- Param{node}: Root data node to serialize.
-     * -- Returns: Compact JSON string.
-     */
+    public static method escapeString(s: string): string {
+        var out = "\""
+        var i = 0
+        while i < s.len() {
+            let c = s.substring(i, i + 1)
+            if c == "\"" {
+                out = out + "\\\""
+            } else if c == "\\" {
+                out = out + "\\\\"
+            } else if c == "\n" {
+                out = out + "\\n"
+            } else if c == "\r" {
+                out = out + "\\r"
+            } else if c == "\t" {
+                out = out + "\\t"
+            } else {
+                out = out + c
+            }
+            i = i + 1
+        }
+        out = out + "\""
+        return out
+    }
+
     public static method stringify(node: DataNode): string {
         match node {
-            DataNode.Null -> return "null"
+            DataNode.Null -> { return "null" }
             DataNode.Bool(b) -> {
                 if b { return "true" }
                 return "false"
             }
-            DataNode.IntNumber(n) -> return StringUtils.intToString(n)
-            DataNode.FloatNumber(f) -> return "0.0"
-            DataNode.Text(s) -> {
-                return JsonSerializer.escapeString(s)
-            }
+            DataNode.IntNumber(n) -> { return StringUtils.intToString(n) }
+            DataNode.FloatNumber(d) -> { return "0.0" }
+            DataNode.Text(s) -> { return JsonSerializer.escapeString(s) }
             DataNode.List(items) -> {
                 var out = "["
                 var i = 0
                 while i < items.len() {
-                    if i > 0 { out = out + "," }
                     out = out + JsonSerializer.stringify(items[i])
+                    if i + 1 < items.len() {
+                        out = out + ","
+                    }
                     i = i + 1
                 }
-                return out + "]"
+                out = out + "]"
+                return out
             }
             DataNode.Dict(entries) -> {
                 var out = "{"
                 var i = 0
                 while i < entries.len() {
-                    if i > 0 { out = out + "," }
-                    out = out + JsonSerializer.escapeString(entries[i].key) + ":" + JsonSerializer.stringify(entries[i].value)
+                    let k = JsonSerializer.escapeString(entries[i].key)
+                    let v = JsonSerializer.stringify(entries[i].value)
+                    out = out + k + ":" + v
+                    if i + 1 < entries.len() {
+                        out = out + ","
+                    }
                     i = i + 1
                 }
-                return out + "}"
+                out = out + "}"
+                return out
             }
+            _ -> { return "null" }
         }
-    }
-
-    /* -- Doc:{escapeString}
-     *
-     * -- Description: Escapes special characters inside string according to RFC 8259 JSON spec.
-     *
-     * -- Param{text}: Raw input text.
-     * -- Returns: Quoted and escaped JSON string literal.
-     */
-    public static method escapeString(text: string): string {
-        var out = "\""
-        var i = 0
-        while i < text.len() {
-            let opt = text.charAt(i)
-            match opt {
-                Some(c) -> {
-                    if c == "\"" { out = out + "\\\"" }
-                    else if c == "\\" { out = out + "\\\\" }
-                    else if c == "\n" { out = out + "\\n" }
-                    else if c == "\r" { out = out + "\\r" }
-                    else if c == "\t" { out = out + "\\t" }
-                    else { out = out + c }
-                }
-                None -> break
-            }
-            i = i + 1
-        }
-        return out + "\""
+        return "null"
     }
 }
 
-/* -- Doc:{JsonParser}
- *
- * -- Description: Parser converting JSON formatted text into DataNode tree.
- */
 public class JsonParser {
-    /* -- Doc:{parse}
-     *
-     * -- Description: Parses JSON text input into a DataNode hierarchy.
-     *
-     * -- Param{jsonText}: Input JSON string.
-     * -- Returns: Result with parsed DataNode or SerializationError.
-     */
     public static method parse(jsonText: string): Result<DataNode, SerializationError> {
         let trimmed = jsonText.trim()
         if trimmed == "null" { return Ok(DataNode.Null) }
@@ -152,8 +115,10 @@ public class JsonParser {
 
         let numOpt = StringUtils.parseInt(trimmed)
         match numOpt {
-            Some(n) -> return Ok(DataNode.IntNumber(n))
-            None -> { }
+            Some(n) -> {
+                return Ok(DataNode.IntNumber(n))
+            }
+            None -> {}
         }
 
         if trimmed.startsWith("[") && trimmed.endsWith("]") {
@@ -171,17 +136,8 @@ public class JsonParser {
 
     private static method extractStringContent(quotedText: string): string {
         var content = ""
-        var i = 1
-        let maxLen = quotedText.len() - 1
-        while i < maxLen {
-            let opt = quotedText.charAt(i)
-            match opt {
-                Some(c) -> {
-                    content = content + c
-                }
-                None -> break
-            }
-            i = i + 1
+        if quotedText.len() >= 2 {
+            content = quotedText.substring(1, quotedText.len() - 1)
         }
         return content
     }

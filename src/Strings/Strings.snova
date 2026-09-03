@@ -1,17 +1,12 @@
 package Snova.Std.Strings
 
+import Snova.Std.Collections
+
 /* -- Doc:{StringUtils}
  *
- * -- Description: Comprehensive string manipulation, parsing, formatting and transformation utilities.
+ * -- Description: Comprehensive string manipulation and formatting utilities in pure Snovalang.
  */
 public class StringUtils {
-    /* -- Doc:{digitValue}
-     *
-     * -- Description: Converts single digit character into numeric integer value (0-9).
-     *
-     * -- Param{c}: Input single character string.
-     * -- Returns: Option with integer digit value or None if not a digit.
-     */
     public static method digitValue(c: string): Option<int> {
         if c == "0" { return Some(0) }
         if c == "1" { return Some(1) }
@@ -26,48 +21,34 @@ public class StringUtils {
         return None
     }
 
-    /* -- Doc:{parseInt}
-     *
-     * -- Description: Pure Snovalang string-to-integer parser with sign support.
-     *
-     * -- Param{s}: Decimal string representation.
-     * -- Returns: Option with parsed integer or None on parse failure.
-     */
     public static method parseInt(s: string): Option<int> {
         let trimmed = s.trim()
-        if trimmed.len() == 0 {
+        if trimmed.isEmpty() {
             return None
         }
         var isNegative = false
         var startIdx = 0
-        let firstOpt = trimmed.charAt(0)
-        match firstOpt {
-            Some(firstChar) -> {
-                if firstChar == "-" {
-                    isNegative = true
-                    startIdx = 1
-                } else if firstChar == "+" {
-                    startIdx = 1
-                }
-            }
-            None -> return None
+        let firstChar = trimmed.substring(0, 1)
+        if firstChar == "-" {
+            isNegative = true
+            startIdx = 1
+        } else if firstChar == "+" {
+            startIdx = 1
         }
 
         var result = 0
         var i = startIdx
-        while i < trimmed.len() {
-            let optC = trimmed.charAt(i)
-            match optC {
-                Some(c) -> {
-                    let dOpt = StringUtils.digitValue(c)
-                    match dOpt {
-                        Some(d) -> {
-                            result = result * 10 + d
-                        }
-                        None -> return None
-                    }
+        let total = trimmed.len()
+        while i < total {
+            let c = trimmed.substring(i, i + 1)
+            let dOpt = StringUtils.digitValue(c)
+            match dOpt {
+                Some(d) -> {
+                    result = result * 10 + d
                 }
-                None -> return None
+                None -> {
+                    return None
+                }
             }
             i = i + 1
         }
@@ -78,192 +59,139 @@ public class StringUtils {
         return Some(result)
     }
 
-    /* -- Doc:{intToString}
-     *
-     * -- Description: Formats an integer value into its decimal string representation.
-     *
-     * -- Param{n}: Integer value to format.
-     * -- Returns: Formatted string representation.
-     */
-    public static method intToString(n: int): string {
-        if n == 0 {
+    public static method intToString(val: int): string {
+        if val == 0 {
             return "0"
         }
+        var n = val
         var isNegative = false
-        var val = n
-        if val < 0 {
+        if n < 0 {
             isNegative = true
-            val = 0 - val
+            n = 0 - n
         }
-
         var digits = ""
-        while val > 0 {
-            let rem = val % 10
+        while n > 0 {
+            let rem = n % 10
             var c = "0"
             if rem == 1 { c = "1" }
-            else if rem == 2 { c = "2" }
-            else if rem == 3 { c = "3" }
-            else if rem == 4 { c = "4" }
-            else if rem == 5 { c = "5" }
-            else if rem == 6 { c = "6" }
-            else if rem == 7 { c = "7" }
-            else if rem == 8 { c = "8" }
-            else if rem == 9 { c = "9" }
-
+            if rem == 2 { c = "2" }
+            if rem == 3 { c = "3" }
+            if rem == 4 { c = "4" }
+            if rem == 5 { c = "5" }
+            if rem == 6 { c = "6" }
+            if rem == 7 { c = "7" }
+            if rem == 8 { c = "8" }
+            if rem == 9 { c = "9" }
             digits = c + digits
-            val = val / 10
+            n = n / 10
         }
-
         if isNegative {
             return "-" + digits
         }
         return digits
     }
 
-    /* -- Doc:{split}
-     *
-     * -- Description: Splits text on each occurrence of delimiter substring.
-     *
-     * -- Param{text}: Source string to split.
-     * -- Param{delimiter}: Delimiter string separator.
-     * -- Returns: Array of separated string chunks.
-     */
-    public static method split(text: string, delimiter: string): Array<string> {
-        let result: Array<string> = []
-        if text.len() == 0 {
-            return result
+    public static method contains(source: string, search: string): bool {
+        return source.indexOf(search) >= 0
+    }
+
+    public static method startsWith(source: string, prefix: string): bool {
+        if prefix.len() > source.len() {
+            return false
         }
-        if delimiter.len() == 0 {
+        return source.substring(0, prefix.len()) == prefix
+    }
+
+    public static method endsWith(source: string, suffix: string): bool {
+        let slen = source.len()
+        let suflen = suffix.len()
+        if suflen > slen {
+            return false
+        }
+        return source.substring(slen - suflen, slen) == suffix
+    }
+
+    public static method split(source: string, delimiter: string): Array<string> {
+        var result: Array<string> = []
+        if delimiter.isEmpty() {
             var i = 0
-            while i < text.len() {
-                let opt = text.charAt(i)
-                match opt {
-                    Some(c) -> result.push(c)
-                    None -> break
-                }
+            while i < source.len() {
+                result.push(source.substring(i, i + 1))
                 i = i + 1
             }
             return result
         }
 
-        var current = ""
-        var i = 0
-        while i < text.len() {
-            let opt = text.charAt(i)
-            match opt {
-                Some(c) -> {
-                    if c == delimiter {
-                        result.push(current)
-                        current = ""
-                    } else {
-                        current = current + c
-                    }
-                }
-                None -> break
+        var cur = source
+        while true {
+            let idx = cur.indexOf(delimiter)
+            if idx < 0 {
+                result.push(cur)
+                break
             }
-            i = i + 1
+            result.push(cur.substring(0, idx))
+            cur = cur.substring(idx + delimiter.len(), cur.len())
         }
-        result.push(current)
         return result
     }
 
-    /* -- Doc:{join}
-     *
-     * -- Description: Joins an array of strings with a specified delimiter separator.
-     *
-     * -- Param{items}: Array of strings to join.
-     * -- Param{delimiter}: Separator placed between items.
-     * -- Returns: Joined single string.
-     */
-    public static method join(items: Array<string>, delimiter: string): string {
+    public static method join(parts: Array<string>, delimiter: string): string {
         var out = ""
         var i = 0
-        while i < items.len() {
-            if i > 0 {
+        let total = parts.len()
+        while i < total {
+            out = out + parts[i]
+            if i + 1 < total {
                 out = out + delimiter
             }
-            out = out + items[i]
+            i = i + 1
+        }
+        return out
+    }
+
+    public static method repeat(s: string, count: int): string {
+        var out = ""
+        var i = 0
+        while i < count {
+            out = out + s
             i = i + 1
         }
         return out
     }
 }
 
-/* -- Doc:{StringBuilder}
- *
- * -- Description: Growable string buffer for high performance concatenation.
- */
 public class StringBuilder {
     private var buffer: Array<string>
     private var size: int
 
-    /* -- Doc:{new}
-     *
-     * -- Description: Creates a new empty StringBuilder.
-     *
-     * -- Returns: New instance of StringBuilder.
-     */
     public static method new(): StringBuilder {
-        let sb = StringBuilder()
-        sb.buffer = []
-        sb.size = 0
-        return sb
+        let empty: Array<string> = []
+        return StringBuilder(empty, 0)
     }
 
-    /* -- Doc:{append}
-     *
-     * -- Description: Appends text string into the internal buffer.
-     *
-     * -- Param{text}: Text to append.
-     * -- Returns: Current total length of builder.
-     */
     public method append(text: string): int {
         this.buffer.push(text)
         this.size = this.size + text.len()
         return this.size
     }
 
-    /* -- Doc:{appendLine}
-     *
-     * -- Description: Appends text followed by a newline character.
-     *
-     * -- Param{text}: Text line to append.
-     * -- Returns: Current total length.
-     */
     public method appendLine(text: string): int {
         this.append(text)
         this.append("\n")
         return this.size
     }
 
-    /* -- Doc:{len}
-     *
-     * -- Description: Returns total character length of accumulated content.
-     *
-     * -- Returns: Integer length.
-     */
     public method len(): int {
         return this.size
     }
 
-    /* -- Doc:{clear}
-     *
-     * -- Description: Clears buffer contents and resets length.
-     *
-     * -- Returns: 0.
-     */
     public method clear(): int {
-        this.buffer = []
+        let empty: Array<string> = []
+        this.buffer = empty
         this.size = 0
         return 0
     }
 
-    /* -- Doc:{toString}
-     *
-     * -- Description: Converts accumulated buffer chunks into final string.
-     *
-     * -- Returns: Complete string.
-     */
     public method toString(): string {
         return StringUtils.join(this.buffer, "")
     }

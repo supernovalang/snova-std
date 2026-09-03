@@ -1,46 +1,33 @@
 package Snova.Std.Async
 
-/* -- Doc:{TaskState}
+import Snova.Std.Collections
+
+/* -- Doc:{TaskStatus}
  *
- * -- Description: Lifecycle states of asynchronous tasks and promises.
+ * -- Description: Lifecycle state of an asynchronous future or task.
  */
-enum TaskState {
+enum TaskStatus {
     Pending
     Running
     Completed
-    Failed(reason: string)
+    Failed
     Cancelled
 }
 
 /* -- Doc:{Channel}
  *
- * -- Description: Multi-producer lightweight concurrent communication channel.
+ * -- Description: Multi-producer, multi-consumer concurrency communication primitive.
  */
-public class Channel {
-    private var buffer: Array<string>
+public class Channel<T> {
+    private var buffer: Array<T>
     private var isClosed: bool
 
-    /* -- Doc:{new}
-     *
-     * -- Description: Creates a new open concurrent Channel.
-     *
-     * -- Returns: Channel instance.
-     */
-    public static method new(): Channel {
-        let ch = Channel()
-        ch.buffer = []
-        ch.isClosed = false
-        return ch
+    public static method new(): Channel<T> {
+        let empty: Array<T> = []
+        return Channel<T>(empty, false)
     }
 
-    /* -- Doc:{send}
-     *
-     * -- Description: Sends a message string into the channel.
-     *
-     * -- Param{message}: Content to send.
-     * -- Returns: True if sent successfully, false if closed.
-     */
-    public method send(message: string): bool {
+    public method send(message: T): bool {
         if this.isClosed {
             return false
         }
@@ -48,45 +35,30 @@ public class Channel {
         return true
     }
 
-    /* -- Doc:{receive}
-     *
-     * -- Description: Receives next available message from the channel.
-     *
-     * -- Returns: Option with message or None if channel buffer is empty.
-     */
-    public method receive(): Option<string> {
+    public method receive(): Option<T> {
         if this.buffer.len() == 0 {
             return None
         }
-        let msg = this.buffer[0]
-        let newBuf: Array<string> = []
-        var i = 1
-        while i < this.buffer.len() {
-            newBuf.push(this.buffer[i])
+        let item = this.buffer[0]
+        var i = 0
+        while i < this.buffer.len() - 1 {
+            this.buffer[i] = this.buffer[i + 1]
             i = i + 1
         }
-        this.buffer = newBuf
-        return Some(msg)
+        this.buffer.pop()
+        return Some(item)
     }
 
-    /* -- Doc:{close}
-     *
-     * -- Description: Closes the channel and disallows further send operations.
-     *
-     * -- Returns: True.
-     */
-    public method close(): bool {
+    public method close(): int {
         this.isClosed = true
-        return true
+        return 0
     }
 
-    /* -- Doc:{len}
-     *
-     * -- Description: Returns number of pending messages in channel.
-     *
-     * -- Returns: Count.
-     */
     public method len(): int {
         return this.buffer.len()
+    }
+
+    public method closed(): bool {
+        return this.isClosed
     }
 }
